@@ -150,6 +150,40 @@ Colab budget. **Week-1 gate: measured T4 tokens/sec benchmark before committing*
   lazily). The Canonical Prompt template lives in `prompts.py` (torch-free); Paraphrased
   Prompts extend it in issue 03.
 
+### Implementation (issue 04)
+
+- **Mixed precision (T4).** Training runs under `torch.amp.autocast(fp16)` with a
+  `GradScaler`; AMP is enabled only on CUDA (`amp and device=="cuda"`), so CPU/MPS
+  toy runs stay fp32 and the walking-skeleton bit-exact resume guarantee holds. The
+  scaler's dynamic scale is checkpointed (in `optimizer.pt`) so resume continues the
+  loss-scaling schedule.
+- **Checkpoint-resume for session death.** `checkpoint.py` writes
+  `ckpt_dir/step_{n}/` (model safetensors + optimizer + scaler + step), with
+  `checkpoint_state.json` written LAST as the completion marker (an interrupted
+  write is never mistaken for complete). `pretrain` checkpoints every `ckpt_every`
+  steps, prunes to `keep_last_k`, and on startup AUTO-RESUMES from the latest
+  complete checkpoint in `ckpt_dir` — so a dead Colab session is recovered by
+  re-running the *same command*. On Colab `ckpt_dir` is Drive-mounted, so it
+  outlives the runtime; a session death costs ≤ `ckpt_every` steps. `out_dir` still
+  holds the FINAL model + manifest-last.
+- **Benchmark gate.** The `benchmark` stage times the target geometry with fp16 on
+  synthetic batches (real vocab/shape), excludes warmup, and records
+  `tokens_per_second`, `est_seconds_per_epoch`, and a `go`/`revise` decision vs
+  `target_tokens_per_sec`. Run it BEFORE `pretrain_full`; record the measured number
+  and the decision here (Track B) — this is the week-1 "measure, then commit" gate.
+- **Metrics + loss curve.** `metrics.MetricsLogger` mirrors loss/lr/tokens-per-sec
+  to a durable `loss_log.csv` (in `ckpt_dir`, so it survives session death) and, when
+  a `trackio_project` is configured and trackio is installed, to a trackio Space for
+  a live dashboard. On finish the CSV is copied into `out_dir` and `loss_curve.png`
+  is rendered (matplotlib, best-effort). trackio + matplotlib are the optional
+  `.[train]` extra; absent, logging degrades to CSV-only (tests run offline).
+- **Hub push.** `hub.py` (+ `python -m tinyfables push`) pushes the tokenizer
+  (`tinyfables-tokenizer`) and the Base Model (`tinyfables-13m-base`); the model push
+  ignores `optimizer.pt`/checkpoint markers so a checkpoint dir can be the source.
+- **Operational record (Track B — fill in during the real run):** measured T4
+  tokens/sec = TBD; benchmark decision = TBD; chosen `ckpt_every` = TBD (± steps lost
+  per death); any size/data-budget change = TBD.
+
 ## Build vs buy
 
 **Build** (line by line, pedagogical core): model, pretraining loop with checkpoint-resume,

@@ -16,6 +16,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
 gpt2 = ["transformers>=4.40"]
+train = ["trackio", "matplotlib>=3.7"]
 
 [build-system]
 requires = ["setuptools>=68"]

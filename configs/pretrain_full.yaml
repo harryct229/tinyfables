@@ -1,6 +1,9 @@
-# Real architecture (design.md: 6/384/6, ctx 1024 -> ~14.2M params). The real
-# training run — mixed precision, the 250M-token data budget, and Drive/HF
-# checkpointing — lands in issue 04; this file fixes the model geometry now.
+# Real Base Model run (issue 04, Colab T4): design geometry (6/384/6, ctx 1024,
+# batch 16, 20k steps) + fp16 AMP + Drive checkpointing + trackio metrics.
+# ckpt_dir is Drive-mounted so checkpoints survive session death; re-running this
+# same command auto-resumes from the latest checkpoint. ckpt_every/keep_last_k
+# are operational — TUNE after the benchmark reading and RECORD the choice in
+# docs/design.md. run_name is stable so a resumed run continues the same trackio run.
 prep_dir: runs/prep_full
 tokenizer_dir: runs/tokenizer_full
 n_layer: 6
@@ -15,3 +18,12 @@ weight_decay: 0.1
 grad_clip: 1.0
 device: auto
 seed: 0
+amp: true
+ckpt_dir: /content/drive/MyDrive/tinyfables/ckpt_base
+ckpt_every: 500
+keep_last_k: 2
+log_every: 50
+trackio_project: tinyfables-base
+run_name: base-v1
+# trackio_space_id: congthanh991/tinyfables-trackio   # set on Colab for the live dashboard
+# ckpt_hub_repo: congthanh991/tinyfables-13m-base-ckpts  # optional Hub mirror of checkpoints

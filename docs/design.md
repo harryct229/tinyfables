@@ -101,6 +101,11 @@ Custom byte-level BPE, vocab 8192, trained on a corpus sample; specials reserved
 (end-of-text, pad). Embedding cost at d=384 tied: 3.1M vs 19.3M for GPT-2's vocab. Report
 figure: avg tokens/fable under GPT-2-50k vs ours-8k vs ours-4k.
 
+**Measured (issue 04, 50k-fable sample):** ours-8k = **337.8** tokens/fable vs GPT-2-50k =
+**349.79** — a ~3.4% compression gain. The honest read: compression is a minor bonus; the
+real ADR-0002 win is the embedding-parameter savings (3.1M vs 19.3M), not sequence length.
+(ours-4k not trained — a stretch variant.)
+
 ## Model
 
 Hand-written decoder-only GPT (course-lecture-aligned), wrapped as a HF `PreTrainedModel`
@@ -180,9 +185,12 @@ Colab budget. **Week-1 gate: measured T4 tokens/sec benchmark before committing*
 - **Hub push.** `hub.py` (+ `python -m tinyfables push`) pushes the tokenizer
   (`tinyfables-tokenizer`) and the Base Model (`tinyfables-13m-base`); the model push
   ignores `optimizer.pt`/checkpoint markers so a checkpoint dir can be the source.
-- **Operational record (Track B — fill in during the real run):** measured T4
-  tokens/sec = TBD; benchmark decision = TBD; chosen `ckpt_every` = TBD (± steps lost
-  per death); any size/data-budget change = TBD.
+- **Operational record (Track B, real T4 run 2026-07-06):** measured T4 throughput =
+  **50,971 tokens/sec** (fp16 AMP, batch 16, ctx 1024, target geometry); benchmark
+  decision = **go** (35k floor cleared; est. epoch over 250M tokens ≈ 82 min, full
+  20k-step run ≈ 1.8–2 h). Chosen `ckpt_every` = **500** (interval ≈ 161 s → a session
+  death costs ≤ ~2.7 min of training); `keep_last_k` = 2. No size/data-budget change —
+  geometry stayed 6/384/6, ctx 1024, batch 16, 20k steps.
 
 ## Build vs buy
 

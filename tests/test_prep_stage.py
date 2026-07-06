@@ -61,6 +61,14 @@ def test_summary_accounting(tmp_path, tok_dir):
     assert s["n_rows"] == 24
     assert 0.3 < s["loss_token_fraction"] < 0.9
     assert s["vocab_size"] <= 512
+    assert 0 <= s["n_tokens_dropped"] < s["window"]
+
+
+def test_prep_manifest_records_tokenizer_input_hash(tmp_path, tok_dir):
+    out = run_prep(tmp_path, tok_dir)
+    prep_manifest = json.loads((out / "manifest.json").read_text())
+    tok_manifest = json.loads((tok_dir / "manifest.json").read_text())
+    assert prep_manifest["inputs"]["tokenizer.json"] == tok_manifest["artifacts"]["tokenizer.json"]
 
 
 def test_prep_is_hash_deterministic(tmp_path, tok_dir):

@@ -28,8 +28,9 @@ FABLE_TMPL = (
 )
 
 
-def main() -> None:
-    out = Path(__file__).parent / "tiny_corpus.jsonl"
+def main(out: Path | None = None) -> None:
+    if out is None:
+        out = Path(__file__).parent / "tiny_corpus.jsonl"
     rows = []
     for character, setting, moral in itertools.product(CHARACTERS, SETTINGS, MORALS):
         rows.append(

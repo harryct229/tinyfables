@@ -1,10 +1,10 @@
-"""Stage registry: name -> (config class, run function). The CLI dispatches
-through this dict; later slices add stages here (pretrain, label, rm, ppo...)."""
+"""Stage registry: name -> (config class, module path). The CLI resolves the
+module (and imports it) only at dispatch time, so heavy future stages
+(torch/trl) only pay their import cost when actually invoked."""
 
 from tinyfables.config import PrepConfig, TokenizerConfig
-from tinyfables.stages import prep, tokenizer
 
-REGISTRY = {
-    "tokenizer": (TokenizerConfig, tokenizer.run),
-    "prep": (PrepConfig, prep.run),
+REGISTRY: dict[str, tuple[type, str]] = {
+    "tokenizer": (TokenizerConfig, "tinyfables.stages.tokenizer"),
+    "prep": (PrepConfig, "tinyfables.stages.prep"),
 }

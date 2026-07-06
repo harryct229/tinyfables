@@ -3,4 +3,4 @@
 
 EOT = "<|endoftext|>"
 PAD = "<|pad|>"
-SPECIALS = [EOT, PAD]  # trained first, so ids are 0 and 1
+SPECIALS: list[str] = [EOT, PAD]  # trained first, so ids are 0 and 1

@@ -4,7 +4,11 @@ the window, and write uint16/uint8 shards.
 
 Contract note: prompt and fable are encoded SEPARATELY and concatenated — no
 separator token, no merged encoding across the boundary. Generation (issue 02)
-must encode prompts the same way so train and inference token streams match."""
+must encode prompts the same way so train and inference token streams match.
+
+Rows are consumed via `iter_rows` and the token/mask buffers are flushed well
+before they reach corpus size, so peak RAM stays O(buffer) end to end (the
+jsonl source may still buffer its rows internally to support seeded shuffling)."""
 
 from __future__ import annotations
 
@@ -17,7 +21,7 @@ from tokenizers import Tokenizer
 
 from tinyfables.config import PrepConfig
 from tinyfables.constants import EOT
-from tinyfables.data import read_rows
+from tinyfables.data import iter_rows
 from tinyfables.stage import write_manifest
 
 
@@ -29,18 +33,21 @@ _FLUSH_AT_TOKENS = 1_000_000
 def run(cfg: PrepConfig, out_dir: Path) -> None:
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     out_dir.mkdir(parents=True, exist_ok=True)
-    tok = Tokenizer.from_file(str(Path(cfg.tokenizer_dir) / "tokenizer.json"))
+    tokenizer_path = Path(cfg.tokenizer_dir) / "tokenizer.json"
+    tok = Tokenizer.from_file(str(tokenizer_path))
     if tok.get_vocab_size() > 65535:
         raise ValueError("vocab too large for uint16 shards")
     eot_id = tok.token_to_id(EOT)
+    if eot_id is None:
+        raise ValueError(f"tokenizer at {cfg.tokenizer_dir} lacks the <|endoftext|> special")
 
-    rows = read_rows(cfg.source, cfg.seed)
     tokens_path = out_dir / "tokens.bin"
     mask_path = out_dir / "mask.bin"
 
     toks_buf: list[int] = []
     mask_buf: list[int] = []
     n_written = 0
+    n_rows = 0
     n_prompt, n_fable = 0, 0
 
     with open(tokens_path, "wb") as tf, open(mask_path, "wb") as mf:
@@ -55,7 +62,8 @@ def run(cfg: PrepConfig, out_dir: Path) -> None:
             toks_buf.clear()
             mask_buf.clear()
 
-        for r in rows:
+        for r in iter_rows(cfg.source, cfg.seed):
+            n_rows += 1
             p = tok.encode(r["prompt"]).ids
             f = tok.encode(r["fable"]).ids
             toks_buf.extend(p)
@@ -71,6 +79,7 @@ def run(cfg: PrepConfig, out_dir: Path) -> None:
 
     n_windows = n_written // cfg.window
     n_keep = n_windows * cfg.window
+    n_tokens_dropped = n_written - n_keep
     with open(tokens_path, "r+b") as tf:
         tf.truncate(n_keep * 2)
     with open(mask_path, "r+b") as mf:
@@ -84,10 +93,11 @@ def run(cfg: PrepConfig, out_dir: Path) -> None:
         loss_token_total = 0
 
     summary = {
-        "n_rows": len(rows),
+        "n_rows": n_rows,
         "window": cfg.window,
         "n_windows": n_windows,
         "n_tokens_written": n_keep,
+        "n_tokens_dropped": n_tokens_dropped,
         "n_prompt_tokens_total": n_prompt,
         "n_fable_tokens_total": n_fable,
         "loss_token_fraction": round(loss_token_total / n_keep, 4) if n_keep else 0.0,
@@ -96,4 +106,10 @@ def run(cfg: PrepConfig, out_dir: Path) -> None:
     summary_path = out_dir / "prep_summary.json"
     summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
 
-    write_manifest(out_dir, "prep", cfg, [tokens_path, mask_path, summary_path])
+    write_manifest(
+        out_dir,
+        "prep",
+        cfg,
+        [tokens_path, mask_path, summary_path],
+        inputs={"tokenizer.json": tokenizer_path},
+    )

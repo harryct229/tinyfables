@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 from pathlib import Path
 
 from tinyfables.config import load_config
@@ -18,8 +19,9 @@ def main(argv: list[str] | None = None) -> int:
     run_p.add_argument("--out", required=True, help="output directory for artifacts")
     args = parser.parse_args(argv)
 
-    config_cls, run_fn = REGISTRY[args.stage]
+    config_cls, module_path = REGISTRY[args.stage]
     cfg = load_config(args.config, config_cls)
+    run_fn = importlib.import_module(module_path).run
     run_fn(cfg, Path(args.out))
     print(f"[tinyfables] stage '{args.stage}' complete -> {args.out}")
     return 0

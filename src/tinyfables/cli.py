@@ -40,6 +40,14 @@ def _add_generate_parser(sub) -> None:
     gen_p.add_argument("--seed", type=int)
 
 
+def _add_push_parser(sub) -> None:
+    push_p = sub.add_parser("push", help="push artifacts to the Hugging Face Hub")
+    push_p.add_argument("--kind", choices=["model", "tokenizer", "checkpoint"], required=True)
+    push_p.add_argument("--path", required=True, help="local dir to push")
+    push_p.add_argument("--repo", required=True, help="target repo id, e.g. user/tinyfables-13m-base")
+    push_p.add_argument("--public", action="store_true", help="create a public repo (default private)")
+
+
 def _run_stage(args) -> int:
     config_cls, module_path = REGISTRY[args.stage]
     cfg = load_config(args.config, config_cls)
@@ -86,13 +94,30 @@ def _generate(args) -> int:
     return 0
 
 
+def _push(args) -> int:
+    # hub imported lazily so `import tinyfables.cli` stays light.
+    from tinyfables import hub
+
+    fn = {
+        "model": hub.push_model_to_hub,
+        "tokenizer": hub.push_tokenizer_to_hub,
+        "checkpoint": hub.upload_checkpoint_dir,
+    }[args.kind]
+    repo = fn(args.path, args.repo, private=not args.public)
+    print(f"[tinyfables] pushed {args.kind} -> {repo}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="tinyfables")
     sub = parser.add_subparsers(dest="cmd", required=True)
     _add_run_parser(sub)
     _add_generate_parser(sub)
+    _add_push_parser(sub)
     args = parser.parse_args(argv)
 
     if args.cmd == "run":
         return _run_stage(args)
+    if args.cmd == "push":
+        return _push(args)
     return _generate(args)

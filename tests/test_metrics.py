@@ -1,7 +1,7 @@
 import csv
 from pathlib import Path
 
-from tinyfables.metrics import MetricsLogger, plot_loss_curve
+from tinyfables.metrics import MetricsLogger, _loss_series, plot_loss_curve
 
 
 def test_csv_mirror_written_without_trackio(tmp_path):
@@ -42,3 +42,39 @@ def test_plot_loss_curve_optional(tmp_path):
     res = plot_loss_curve(csv_path, png)
     # matplotlib may be absent (returns None) or present (PNG exists) — both OK.
     assert res is None or Path(res).exists()
+
+
+def test_loss_series_dedups_and_sorts_across_resume(tmp_path):
+    # Simulate a session-death resume: session 1 logs steps 50, 100, 150, ..., up
+    # through 3050, 3100, then dies at step 3200 (mid-session, past the last
+    # checkpoint). Session 2 resumes from the last CHECKPOINT (step_3000) and
+    # re-runs steps 3050 and 3100 with DIFFERENT loss values before continuing —
+    # so the CSV holds duplicate rows for those two steps, out of step order.
+    csv_path = tmp_path / "loss_log.csv"
+    with open(csv_path, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["step", "loss", "lr", "tokens_per_sec"])
+        # session 1
+        w.writerow([50, "3.000000", "1e-4", "100.0"])
+        w.writerow([100, "2.900000", "1e-4", "100.0"])
+        w.writerow([150, "2.800000", "1e-4", "100.0"])
+        w.writerow([3050, "2.000000", "1e-4", "100.0"])  # session 1's original value
+        w.writerow([3100, "1.900000", "1e-4", "100.0"])  # session 1's original value
+        w.writerow([3200, "1.500000", "1e-4", "100.0"])  # last row before death
+        # session 2 (resumed from step_3000 checkpoint) re-runs 3050/3100
+        w.writerow([3050, "1.999999", "1e-4", "100.0"])  # re-run, different value
+        w.writerow([3100, "1.888888", "1e-4", "100.0"])  # re-run, different value
+        # rows with an empty/"nan" loss must be skipped
+        w.writerow([3150, "nan", "1e-4", "100.0"])
+        w.writerow([3160, "", "1e-4", "100.0"])
+
+    steps, losses = _loss_series(csv_path)
+
+    assert steps == sorted(steps)
+    assert len(steps) == len(set(steps))  # strictly unique
+    assert steps == [50, 100, 150, 3050, 3100, 3200]
+    # the LAST-written loss wins for the duplicated steps (session 2's re-run)
+    assert losses[steps.index(3050)] == 1.999999
+    assert losses[steps.index(3100)] == 1.888888
+    # session-1-only steps keep their original values
+    assert losses[steps.index(3200)] == 1.5

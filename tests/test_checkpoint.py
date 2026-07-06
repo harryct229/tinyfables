@@ -58,3 +58,23 @@ def test_prune_keeps_last_k(tmp_path):
     prune_checkpoints(tmp_path, keep_last_k=1)
     remaining = sorted(p.name for p in tmp_path.iterdir() if p.is_dir())
     assert remaining == ["step_6"]
+
+
+def test_load_restores_enabled_scaler_state(tmp_path):
+    # AMP-on: unlike the disabled scaler (state_dict() == {} -> normalized to
+    # None), an enabled scaler's state_dict is non-empty and must round-trip
+    # through save/load intact.
+    torch.manual_seed(0)
+    model = GPT(GPTConfig(vocab_size=48, n_layer=2, n_head=2, d_model=64, n_ctx=64))
+    opt = torch.optim.AdamW(model.parameters(), lr=1e-3)
+    scaler = torch.amp.GradScaler("cpu", enabled=True)
+
+    save_checkpoint(model, opt, scaler, step=5, ckpt_dir=tmp_path)
+    _loaded, state = load_checkpoint(tmp_path / "step_5", GPT, device="cpu")
+
+    assert state["scaler"] is not None
+    assert isinstance(state["scaler"], dict)
+    assert "scale" in state["scaler"]
+
+    fresh_scaler = torch.amp.GradScaler("cpu", enabled=True)
+    fresh_scaler.load_state_dict(state["scaler"])  # must not raise

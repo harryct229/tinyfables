@@ -50,6 +50,22 @@ class MetricsLogger:
             self._trackio.finish()
 
 
+def _loss_series(csv_path) -> tuple[list[int], list[float]]:
+    """Read the (possibly resume-duplicated) loss CSV and return a clean series:
+    deduplicated by step (last occurrence wins, since a later session re-ran those
+    steps after resuming from an earlier checkpoint) and sorted ascending by step.
+    Rows with an empty or "nan" loss are skipped. Pure/no matplotlib dependency so
+    it is testable offline."""
+    by_step: dict[int, float] = {}
+    with open(csv_path) as f:
+        for row in csv.DictReader(f):
+            if row["loss"] and row["loss"] != "nan":
+                by_step[int(row["step"])] = float(row["loss"])
+    steps = sorted(by_step)
+    losses = [by_step[s] for s in steps]
+    return steps, losses
+
+
 def plot_loss_curve(csv_path, png_path):
     """Render a loss-vs-step PNG from the CSV. Returns the PNG path, or None if
     matplotlib is unavailable (the CSV remains the durable artifact)."""
@@ -60,12 +76,7 @@ def plot_loss_curve(csv_path, png_path):
         import matplotlib.pyplot as plt
     except Exception:
         return None
-    steps, losses = [], []
-    with open(csv_path) as f:
-        for row in csv.DictReader(f):
-            if row["loss"] and row["loss"] != "nan":
-                steps.append(int(row["step"]))
-                losses.append(float(row["loss"]))
+    steps, losses = _loss_series(csv_path)
     fig, ax = plt.subplots()
     ax.plot(steps, losses)
     ax.set_xlabel("step")

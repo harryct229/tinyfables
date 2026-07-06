@@ -1,0 +1,13 @@
+# Toy pretrain over the fixture shards (CPU, seconds) — the walking-skeleton demo.
+prep_dir: runs/prep_toy
+tokenizer_dir: runs/tokenizer_toy
+n_layer: 2
+n_head: 2
+d_model: 64
+n_ctx: 256
+batch_size: 4
+steps: 100
+warmup_steps: 10
+lr: 0.001
+seed: 0
+device: cpu

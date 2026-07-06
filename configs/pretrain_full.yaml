@@ -1,0 +1,18 @@
+# Real architecture (design.md: 6/384/6, ctx 1024 -> ~14.2M params). The real
+# training run — mixed precision, the 250M-token data budget, and Drive/HF
+# checkpointing — lands in issue 04; this file fixes the model geometry now.
+prep_dir: runs/prep_full
+tokenizer_dir: runs/tokenizer_full
+n_layer: 6
+n_head: 6
+d_model: 384
+n_ctx: 1024
+batch_size: 16
+steps: 20000
+warmup_steps: 200
+lr: 0.0003
+weight_decay: 0.1
+grad_clip: 1.0
+save_every: 1000
+device: auto
+seed: 0

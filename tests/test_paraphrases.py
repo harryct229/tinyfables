@@ -179,3 +179,58 @@ def test_parse_returns_none_when_an_element_is_missing():
         FableSpec(character="a", setting="b", challenge="c", outcome="d", moral="e")
     ).replace("- Teaching: e\n", "")
     assert parse_canonical_prompt(text) is None
+
+
+from tinyfables.paraphrases import render_paraphrase
+
+# Adversarial Element values: braces (must NOT be re-substituted), a literal
+# "{character}" (must survive as-is), colons, and quotes (the JSON template).
+ADVERSARIAL_SPECS = [
+    FableSpec(
+        character="a shy octopus",
+        setting="a quiet tide pool",
+        challenge="doubting oneself",
+        outcome="a friend helps just in time",
+        moral="courage grows by small steps",
+        age_range="4-7",
+        word_count=60,
+    ),
+    FableSpec(
+        character="a cat with {setting} posters",   # literal braces + slot name
+        setting="a room labeled {character}",
+        challenge="a riddle: colons, {braces}, and \"quotes\"",
+        outcome="the {outcome} resolves itself",
+        moral="be kind: always {moral}",
+        age_range="11-13",
+        word_count=200,
+    ),
+]
+
+
+def test_render_preserves_every_element_value_verbatim():
+    bank = load_bank(BANK_PATH)
+    for template in bank.templates:  # includes held-out templates
+        for spec in ADVERSARIAL_SPECS:
+            out = render_paraphrase(template, spec)
+            for field in ("character", "setting", "challenge", "outcome", "moral"):
+                assert getattr(spec, field) in out, (template.id, field)
+
+
+def test_render_does_not_reinterpret_injected_braces():
+    bank = load_bank(BANK_PATH)
+    spec = FableSpec(
+        character="{setting}",  # if reprocessed this would become the setting value
+        setting="a barn",
+        challenge="c",
+        outcome="d",
+        moral="e",
+    )
+    for template in bank.templates:
+        out = render_paraphrase(template, spec)
+        assert "{setting}" in out  # the literal survives; not replaced by "a barn"
+
+
+def test_render_rejects_missing_element():
+    bank = load_bank(BANK_PATH)
+    with pytest.raises(ValueError):
+        render_paraphrase(bank.seen_templates[0], FableSpec(character="only a character"))

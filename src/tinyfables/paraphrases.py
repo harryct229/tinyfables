@@ -138,3 +138,18 @@ def parse_canonical_prompt(text: str) -> ParsedPrompt | None:
     if m is None:
         return None
     return ParsedPrompt(age_range=m["age_range"], word_count=int(m["word_count"]), **values)
+
+
+def _element_values(obj) -> dict:
+    values = {slot: getattr(obj, slot) for slot in _ALLOWED_SLOTS}
+    missing = [s for s in _ELEMENT_SLOTS if values[s] is None]
+    if missing:
+        raise ValueError(f"cannot paraphrase: missing element values {missing}")
+    return values
+
+
+def render_paraphrase(template: Template, obj) -> str:
+    """Render `template` from a ParsedPrompt/FableSpec. str.format substitutes
+    Element values verbatim and never re-interprets the substituted text, so
+    values containing braces/colons/quotes are preserved exactly."""
+    return template.text.format(**_element_values(obj))

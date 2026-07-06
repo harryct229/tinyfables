@@ -98,6 +98,37 @@ Sizing argument: Chinchilla ~20 tokens/param → 13.7M wants ~210–270M tokens 
 Colab budget. **Week-1 gate: measured T4 tokens/sec benchmark before committing** (est. 1–2h per
 200M-token epoch; if reality is far worse, shrink data budget or model — measure, then commit).
 
+### Implementation (issue 02)
+
+- **HF wrapper (transformers 5.x).** `GPT` subclasses `PreTrainedModel` + `GenerationMixin`
+  so `.generate()`, `save_pretrained`/`from_pretrained`, TRL (issue 08) and `push_to_hub`
+  (issue 11) come for free. Weight tying uses the 5.x contract: `_tied_weights_keys =
+  {"head.weight": "tok.weight"}` (a dict, not a list), `tie_word_embeddings=True` passed
+  explicitly through the config (5.x does not default it), and tying performed by
+  `post_init()` — hand-aliasing the tensors does not survive `from_pretrained`.
+- **Attention written out explicitly** (QKV projection → scaled dot-product → causal-mask
+  softmax → output projection), not a fused SDPA/`MultiheadAttention` call — the model is
+  the pedagogical core, so the causal mask and softmax are visible and directly tested. The
+  causal mask is built inline in `forward`, not cached as a registered buffer: transformers
+  5.x constructs the model under a meta device in `from_pretrained`, and a non-persistent
+  buffer would be materialized as uninitialized garbage there, corrupting the mask after a
+  save/load round-trip.
+- **Generation** uses HF `.generate()` with `use_cache=False` (no KV cache in the walking
+  skeleton — the full window is recomputed each step; acceptable at ctx 1024 demo scale, a
+  later optimization if needed). The generation *contract* (FableSpec/free-text → fable) is
+  our own code and encodes the prompt exactly as prep does.
+- **Measured parameter count** at the real config: **14,186,496** (≈14.19M) — 13.8M
+  transformer+token-embedding + 0.39M learned positions. The 13.7M headline counts
+  transformer+token-embedding.
+- **Walking-skeleton training is fp32** on CPU/MPS/CUDA (device-selectable). Batches are a
+  pure function of the step and dropout is 0, so checkpoint-resume is bit-exact (train-N ==
+  train-k → resume → train-(N−k)). Mixed precision (fp16 + GradScaler) and the real
+  data/checkpoint budget are deferred to issue 04.
+- `torch` and `transformers` are core dependencies but kept out of the light import path
+  (stage registry is lazy by module-path string; the CLI's `generate` branch imports torch
+  lazily). The Canonical Prompt template lives in `prompts.py` (torch-free); Paraphrased
+  Prompts extend it in issue 03.
+
 ## Build vs buy
 
 **Build** (line by line, pedagogical core): model, pretraining loop with checkpoint-resume,

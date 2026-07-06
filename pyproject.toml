@@ -8,6 +8,8 @@ dependencies = [
     "tokenizers>=0.15",
     "pyyaml>=6.0",
     "datasets>=2.19",
+    "torch>=2.4",
+    "transformers>=5.0",
 ]
 
 [project.optional-dependencies]

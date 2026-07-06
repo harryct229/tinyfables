@@ -53,3 +53,28 @@ def test_source_requires_exactly_one_backend():
         SourceSpec()  # neither jsonl nor hf
     with pytest.raises(ValueError):
         SourceSpec(jsonl_path="a.jsonl", hf_dataset="klusai/ds-tf1-en-3m")  # both
+
+
+def test_load_pretrain_config(tmp_path):
+    p = write_yaml(
+        tmp_path,
+        "prep_dir: runs/prep\ntokenizer_dir: runs/tok\n"
+        "n_layer: 2\nd_model: 64\nn_head: 2\nn_ctx: 256\n"
+        "batch_size: 4\nsteps: 50\nlr: 0.001\nseed: 0\n",
+    )
+    from tinyfables.config import PretrainConfig
+
+    cfg = load_config(p, PretrainConfig)
+    assert cfg.prep_dir == "runs/prep"
+    assert cfg.tokenizer_dir == "runs/tok"
+    assert cfg.n_layer == 2 and cfg.d_model == 64 and cfg.n_head == 2
+    assert cfg.n_ctx == 256 and cfg.batch_size == 4 and cfg.steps == 50
+    assert cfg.resume_from is None  # default
+
+
+def test_pretrain_config_rejects_unknown_key(tmp_path):
+    from tinyfables.config import PretrainConfig
+
+    p = write_yaml(tmp_path, "prep_dir: a\ntokenizer_dir: b\nlayers: 6\n")
+    with pytest.raises(KeyError):
+        load_config(p, PretrainConfig)

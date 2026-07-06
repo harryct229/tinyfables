@@ -1,0 +1,27 @@
+[project]
+name = "tinyfables"
+version = "0.1.0"
+description = "From-scratch moral-fable GPT with RLAIF alignment (course project)"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.26",
+    "tokenizers>=0.15",
+    "pyyaml>=6.0",
+    "datasets>=2.19",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+gpt2 = ["transformers>=4.40"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["network: requires internet access (deselected by default)"]
+addopts = "-m 'not network'"

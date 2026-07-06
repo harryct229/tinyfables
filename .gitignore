@@ -2,3 +2,6 @@
 *.pdf
 __pycache__/
 .venv/
+.superpowers/
+runs/
+*.egg-info/

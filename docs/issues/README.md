@@ -6,7 +6,7 @@ as issues, apply `ready-for-agent`, and link back to the PRD as parent). All iss
 
 | # | Slice | Blocked by | Done |
 |---|-------|-----------|------|
-| 01 | [Stage-contract skeleton: data prep + tokenizer](./01-stage-contract-skeleton.md) | — | ☐ |
+| 01 | [Stage-contract skeleton: data prep + tokenizer](./01-stage-contract-skeleton.md) | — | ☑ |
 | 02 | [Walking skeleton: hand-written GPT writes its first fable](./02-walking-skeleton-model-generate.md) | 01 | ☐ |
 | 03 | [Paraphrased Prompts: template bank + rendering](./03-paraphrased-prompts.md) | 01 | ☐ |
 | 04 | [Real Base Model on free Colab](./04-real-base-model-colab.md) | 02, 03 | ☐ |

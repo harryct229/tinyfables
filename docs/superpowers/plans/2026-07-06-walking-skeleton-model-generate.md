@@ -325,10 +325,6 @@ class CausalSelfAttention(nn.Module):
         self.c_attn = nn.Linear(config.d_model, 3 * config.d_model)
         self.c_proj = nn.Linear(config.d_model, config.d_model)
         self.c_proj.RESIDUAL = True  # scaled-down init (see GPT._init_weights)
-        mask = torch.tril(torch.ones(config.n_ctx, config.n_ctx)).view(
-            1, 1, config.n_ctx, config.n_ctx
-        )
-        self.register_buffer("causal_mask", mask, persistent=False)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         B, T, C = x.shape
@@ -338,7 +334,14 @@ class CausalSelfAttention(nn.Module):
         k = k.view(B, T, self.n_head, hs).transpose(1, 2)
         v = v.view(B, T, self.n_head, hs).transpose(1, 2)
         att = (q @ k.transpose(-2, -1)) / math.sqrt(hs)
-        att = att.masked_fill(self.causal_mask[:, :, :T, :T] == 0, float("-inf"))
+        # Causal mask built inline, NOT a registered buffer: transformers 5.x
+        # constructs the model under a meta device in from_pretrained, and a
+        # non-persistent buffer (absent from the checkpoint) would be materialized
+        # as uninitialized garbage — corrupting the mask after a round-trip.
+        future = torch.triu(
+            torch.ones(T, T, dtype=torch.bool, device=x.device), diagonal=1
+        )
+        att = att.masked_fill(future, float("-inf"))
         att = F.softmax(att, dim=-1)
         y = att @ v  # (B, nh, T, hs)
         y = y.transpose(1, 2).contiguous().view(B, T, C)
@@ -1313,7 +1316,11 @@ In `docs/design.md`, append a subsection to the **Model** section (after the "Si
   `post_init()` — hand-aliasing the tensors does not survive `from_pretrained`.
 - **Attention written out explicitly** (QKV projection → scaled dot-product → causal-mask
   softmax → output projection), not a fused SDPA/`MultiheadAttention` call — the model is
-  the pedagogical core, so the causal mask and softmax are visible and directly tested.
+  the pedagogical core, so the causal mask and softmax are visible and directly tested. The
+  causal mask is built inline in `forward`, not cached as a registered buffer: transformers
+  5.x constructs the model under a meta device in `from_pretrained`, and a non-persistent
+  buffer would be materialized as uninitialized garbage there, corrupting the mask after a
+  save/load round-trip.
 - **Generation** uses HF `.generate()` with `use_cache=False` (no KV cache in the walking
   skeleton — the full window is recomputed each step; acceptable at ctx 1024 demo scale, a
   later optimization if needed). The generation *contract* (FableSpec/free-text → fable) is

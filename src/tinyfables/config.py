@@ -38,6 +38,14 @@ class PrepConfig:
     tokenizer_dir: str
     window: int = 1024
     seed: int = 0
+    paraphrase_bank: str | None = None
+    paraphrase_coverage: float = 0.0
+
+    def __post_init__(self) -> None:
+        if not 0.0 <= self.paraphrase_coverage <= 1.0:
+            raise ValueError("paraphrase_coverage must be in [0, 1]")
+        if self.paraphrase_coverage > 0.0 and self.paraphrase_bank is None:
+            raise ValueError("paraphrase_coverage > 0 requires paraphrase_bank")
 
 
 @dataclass(frozen=True)

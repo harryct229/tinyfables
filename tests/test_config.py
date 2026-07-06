@@ -78,3 +78,39 @@ def test_pretrain_config_rejects_unknown_key(tmp_path):
     p = write_yaml(tmp_path, "prep_dir: a\ntokenizer_dir: b\nlayers: 6\n")
     with pytest.raises(KeyError):
         load_config(p, PretrainConfig)
+
+
+def test_prep_paraphrase_defaults():
+    cfg = PrepConfig(source=SourceSpec(jsonl_path="c.jsonl"), tokenizer_dir="t")
+    assert cfg.paraphrase_bank is None
+    assert cfg.paraphrase_coverage == 0.0
+
+
+def test_prep_loads_paraphrase_knobs(tmp_path):
+    p = write_yaml(
+        tmp_path,
+        "source:\n  jsonl_path: corpus.jsonl\ntokenizer_dir: runs/tok\n"
+        "paraphrase_bank: configs/paraphrases.yaml\nparaphrase_coverage: 0.15\n",
+    )
+    cfg = load_config(p, PrepConfig)
+    assert cfg.paraphrase_bank == "configs/paraphrases.yaml"
+    assert cfg.paraphrase_coverage == 0.15
+
+
+def test_prep_rejects_coverage_out_of_range():
+    with pytest.raises(ValueError):
+        PrepConfig(
+            source=SourceSpec(jsonl_path="c.jsonl"),
+            tokenizer_dir="t",
+            paraphrase_bank="b.yaml",
+            paraphrase_coverage=1.5,
+        )
+
+
+def test_prep_coverage_requires_bank():
+    with pytest.raises(ValueError):
+        PrepConfig(
+            source=SourceSpec(jsonl_path="c.jsonl"),
+            tokenizer_dir="t",
+            paraphrase_coverage=0.2,
+        )

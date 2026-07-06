@@ -1,4 +1,7 @@
 # Real run (issue 04, Colab): ~450k fables ≈ 250M tokens (design.md data budget).
+# Augmentation ON (design range 10–20%; 0.15 matches the toy) — the main Base
+# Model trains WITH Paraphrased Prompts so issue-10's no-aug sibling is a real
+# ablation, not a duplicate. families.bin/family_counts prove held-out leakage = 0.
 source:
   hf_dataset: klusai/ds-tf1-en-3m
   hf_split: train
@@ -6,3 +9,5 @@ source:
 tokenizer_dir: runs/tokenizer_full
 window: 1024
 seed: 0
+paraphrase_bank: configs/paraphrases.yaml
+paraphrase_coverage: 0.15

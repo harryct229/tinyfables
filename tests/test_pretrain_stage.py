@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 import torch
 
+from tinyfables.checkpoint import find_latest_checkpoint
 from tinyfables.config import PrepConfig, PretrainConfig, SourceSpec, TokenizerConfig
 from tinyfables.model import GPT
 from tinyfables.stages import pretrain as pretrain_stage
@@ -72,6 +73,25 @@ def test_stage_writes_checkpoint_and_manifest(toy_shards, tmp_path):
     assert 13_000 < summary["n_params"] < 10_000_000  # tiny model, sanity band
 
 
+def test_amp_flag_is_safe_noop_on_cpu(toy_shards, tmp_path):
+    # cfg.amp=True on CPU must not crash (GradScaler is disabled off-CUDA) and
+    # must still produce a usable checkpoint with finite loss.
+    out = tmp_path / "amp_cpu"
+    pretrain_stage.run(toy_cfg(toy_shards, steps=4, amp=True), out)
+    summary = json.loads((out / "pretrain_summary.json").read_text())
+    assert summary["steps"] == 4
+    import math
+    assert not math.isnan(summary["final_loss"])
+
+
+def test_final_optimizer_pt_has_scaler_key(toy_shards, tmp_path):
+    out = tmp_path / "sc"
+    pretrain_stage.run(toy_cfg(toy_shards, steps=2), out)
+    state = torch.load(out / "optimizer.pt", map_location="cpu")
+    assert "scaler" in state  # None on CPU (AMP off), but the key is always present
+    assert state["step"] == 2
+
+
 def test_resume_equality_within_tolerance(toy_shards, tmp_path):
     full = tmp_path / "full"
     part = tmp_path / "part"
@@ -85,3 +105,69 @@ def test_resume_equality_within_tolerance(toy_shards, tmp_path):
     assert a.keys() == b.keys()
     for k in a:
         assert torch.allclose(a[k], b[k], atol=1e-5), f"param {k} diverged on resume"
+
+
+def test_session_death_resume_via_ckpt_dir(toy_shards, tmp_path):
+    ckpt = tmp_path / "ckpt"
+    # "Session 1" dies after 3 steps; a checkpoint was taken at completed step 2.
+    pretrain_stage.run(toy_cfg(toy_shards, steps=3, ckpt_dir=str(ckpt), ckpt_every=2), tmp_path / "s1")
+    latest = find_latest_checkpoint(ckpt)
+    assert latest is not None and latest.name == "step_2"
+
+    # "Session 2" re-runs the SAME command (target steps=6) -> auto-resumes from step_2.
+    pretrain_stage.run(toy_cfg(toy_shards, steps=6, ckpt_dir=str(ckpt), ckpt_every=2), tmp_path / "s2")
+
+    # A straight-through 6-step run is the ground truth; CPU determinism -> bit-exact.
+    pretrain_stage.run(toy_cfg(toy_shards, steps=6), tmp_path / "full")
+    a = GPT.from_pretrained(tmp_path / "full").state_dict()
+    b = GPT.from_pretrained(tmp_path / "s2").state_dict()
+    assert a.keys() == b.keys()
+    for k in a:
+        assert torch.allclose(a[k], b[k], atol=1e-5), f"param {k} diverged after resume"
+
+
+def test_prune_keeps_last_k_during_training(toy_shards, tmp_path):
+    ckpt = tmp_path / "ckpt"
+    pretrain_stage.run(toy_cfg(toy_shards, steps=6, ckpt_dir=str(ckpt), ckpt_every=2, keep_last_k=1), tmp_path / "o")
+    dirs = sorted(p.name for p in ckpt.iterdir() if p.is_dir())
+    assert dirs == ["step_4"]  # checkpoints at 2 and 4 (6==steps skipped); keep last 1
+
+
+def test_ckpt_hub_mirror_invoked_when_configured(toy_shards, tmp_path, monkeypatch):
+    from tinyfables import hub
+
+    seen = []
+    monkeypatch.setattr(hub, "upload_checkpoint_dir", lambda d, repo, **kw: seen.append((str(d), repo)) or repo)
+    pretrain_stage.run(
+        toy_cfg(toy_shards, steps=4, ckpt_dir=str(tmp_path / "ckpt"), ckpt_every=2, ckpt_hub_repo="user/ckpts"),
+        tmp_path / "o",
+    )
+    assert seen and seen[-1][1] == "user/ckpts"
+
+
+def test_metrics_csv_and_manifest_artifact(toy_shards, tmp_path):
+    out = tmp_path / "m"
+    pretrain_stage.run(toy_cfg(toy_shards, steps=6, log_every=2), out)
+    csv_path = out / "loss_log.csv"
+    assert csv_path.exists()
+    import csv as _csv
+    rows = list(_csv.DictReader(open(csv_path)))
+    assert len(rows) >= 3  # steps 2, 4, and the final row
+    assert set(rows[0]) == {"step", "loss", "lr", "tokens_per_sec"}
+    manifest = json.loads((out / "manifest.json").read_text())
+    assert "loss_log.csv" in manifest["artifacts"]
+
+
+def test_metrics_csv_lives_in_ckpt_dir_then_copied(toy_shards, tmp_path):
+    ckpt = tmp_path / "ckpt"
+    out = tmp_path / "o"
+    pretrain_stage.run(toy_cfg(toy_shards, steps=4, log_every=1, ckpt_dir=str(ckpt)), out)
+    assert (ckpt / "loss_log.csv").exists()  # durable across session death (Drive)
+    assert (out / "loss_log.csv").exists()   # copied into the final stage dir
+
+
+def test_trackio_project_set_but_absent_does_not_crash(toy_shards, tmp_path):
+    # trackio is not installed; a configured project must degrade to CSV-only.
+    out = tmp_path / "t"
+    pretrain_stage.run(toy_cfg(toy_shards, steps=2, log_every=1, trackio_project="ignored", run_name="r"), out)
+    assert (out / "loss_log.csv").exists()

@@ -1,6 +1,6 @@
 # 01 — Stage-contract skeleton: data prep + tokenizer
 
-**Triage**: `ready-for-agent`
+**Triage**: `enhancement` · `ready-for-agent`
 
 ## Parent
 

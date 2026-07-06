@@ -2,7 +2,7 @@
 
 Local stand-in for an issue tracker (none exists yet — if a GitHub repo is created, file these
 as issues, apply `ready-for-agent`, and link back to the PRD as parent). All issues are triaged
-`ready-for-agent`. Parent: [PRD](../prd.md). Tick the box when a slice lands.
+`enhancement` · `ready-for-agent`. Parent: [PRD](../prd.md). Tick the box when a slice lands.
 
 | # | Slice | Blocked by | Done |
 |---|-------|-----------|------|

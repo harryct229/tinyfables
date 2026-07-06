@@ -1,6 +1,6 @@
 # 11 — Demo Space + Hub cards
 
-**Triage**: `ready-for-agent`
+**Triage**: `enhancement` · `ready-for-agent`
 
 ## Parent
 

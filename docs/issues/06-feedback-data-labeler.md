@@ -1,6 +1,6 @@
 # 06 — Feedback data: Rubric, pairs, AI Labeler, audits
 
-**Triage**: `ready-for-agent`
+**Triage**: `enhancement` · `ready-for-agent`
 
 ## Parent
 

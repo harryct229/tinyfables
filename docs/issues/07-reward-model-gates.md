@@ -1,6 +1,6 @@
 # 07 — Reward Model + gates
 
-**Triage**: `ready-for-agent`
+**Triage**: `enhancement` · `ready-for-agent`
 
 ## Parent
 

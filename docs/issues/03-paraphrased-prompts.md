@@ -1,6 +1,6 @@
 # 03 — Paraphrased Prompts: template bank + rendering
 
-**Triage**: `ready-for-agent`
+**Triage**: `enhancement` · `ready-for-agent`
 
 ## Parent
 

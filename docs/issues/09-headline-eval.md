@@ -1,6 +1,6 @@
 # 09 — Headline eval: judge + blind human A/B
 
-**Triage**: `ready-for-agent`
+**Triage**: `enhancement` · `ready-for-agent`
 
 ## Parent
 

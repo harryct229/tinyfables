@@ -1,6 +1,6 @@
 # 08 — Aligned Model: PPO with DPO fallback
 
-**Triage**: `ready-for-agent`
+**Triage**: `enhancement` · `ready-for-agent`
 
 ## Parent
 

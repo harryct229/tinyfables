@@ -1,6 +1,6 @@
 # 10 — Committed ablation + report figures
 
-**Triage**: `ready-for-agent`
+**Triage**: `enhancement` · `ready-for-agent`
 
 ## Parent
 

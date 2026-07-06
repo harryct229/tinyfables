@@ -1,6 +1,6 @@
 # 02 — Walking skeleton: hand-written GPT writes its first fable
 
-**Triage**: `ready-for-agent`
+**Triage**: `enhancement` · `ready-for-agent`
 
 ## Parent
 

@@ -1,6 +1,6 @@
 # 05 — Mechanical eval suite
 
-**Triage**: `ready-for-agent`
+**Triage**: `enhancement` · `ready-for-agent`
 
 ## Parent
 

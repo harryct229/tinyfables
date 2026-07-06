@@ -1,6 +1,6 @@
 # 04 — Real Base Model on free Colab
 
-**Triage**: `ready-for-agent`
+**Triage**: `enhancement` · `ready-for-agent`
 
 ## Parent
 

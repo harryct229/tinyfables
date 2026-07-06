@@ -47,6 +47,27 @@ Why no SFT and why no pretrained base: ADR-0001.
   not asserted.
 - Demo accepts either a structured form or free-text instruction.
 
+### Paraphrase augmentation (issue 03)
+
+The bank lives at `configs/paraphrases.yaml` (versioned, human-curated): 30
+templates, each slot-filling all five Elements verbatim; **5 are `held_out:
+true`** (`heldout-minimal-01`, `heldout-question-02`, `heldout-json-03`,
+`heldout-letter-04`, `heldout-headline-05`) and are never used in training —
+they are the robustness grid's unseen-phrasing column (issues 05/10). Prep
+(`stages/prep.py`) rewrites a `paraphrase_coverage` fraction of rows (10–20%
+design range; the toy config uses 0.15): it parses Element values back out of
+each Canonical Prompt, re-renders under a **seen** template chosen by an RNG
+seeded on `(seed, row_index)` (so runs stay hash-deterministic), and writes a
+per-row `families.bin` (uint8: 0 canonical / 1 seen-template / 2
+held-out-template) plus `family_counts` in `prep_summary.json`. Rows that do not
+match the canonical structure fall back to canonical unchanged and are counted
+in `n_parse_failures`. Held-out leakage is provable from the artifacts:
+`families.bin` never contains code 2 and `family_counts["held-out-template"]`
+is 0 for any training prep. Verbatim preservation is a property test over every
+template × spec; `str.format` never re-interprets substituted values, so
+Element values with braces/colons survive exactly, keeping spec adherence
+mechanically measurable.
+
 ## Data
 
 Dataset facts: 3M fables, Llama-3.1-8B-Instruct-generated, 2.8M/100k/100k splits, avg ~521

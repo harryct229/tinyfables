@@ -153,3 +153,35 @@ def render_paraphrase(template: Template, obj) -> str:
     Element values verbatim and never re-interprets the substituted text, so
     values containing braces/colons/quotes are preserved exactly."""
     return template.text.format(**_element_values(obj))
+
+
+@dataclass(frozen=True)
+class RowResult:
+    prompt: str
+    family: str
+    parse_failed: bool
+
+
+def select_row(
+    text: str, row_index: int, coverage: float, seed: int, bank: ParaphraseBank | None
+) -> RowResult:
+    """Decide a row's prompt + prompt-family. Deterministic in (seed, row_index)
+    so two prep runs with the same config produce identical families. Training
+    never uses held-out templates, so family is canonical or seen-template."""
+    if bank is None or coverage <= 0.0:
+        return RowResult(text, CANONICAL, False)
+    parsed = parse_canonical_prompt(text)
+    if parsed is None:
+        return RowResult(text, CANONICAL, True)
+    rng = random.Random(f"{seed}-{row_index}")
+    if rng.random() >= coverage:
+        return RowResult(text, CANONICAL, False)
+    template = bank.choose_seen(rng)
+    return RowResult(render_paraphrase(template, parsed), SEEN_TEMPLATE, False)
+
+
+def load_families(path: str | Path):
+    """Read families.bin as a uint8 array; FAMILIES[code] gives the tag name."""
+    import numpy as np
+
+    return np.frombuffer(Path(path).read_bytes(), dtype=np.uint8)

@@ -234,3 +234,71 @@ def test_render_rejects_missing_element():
     bank = load_bank(BANK_PATH)
     with pytest.raises(ValueError):
         render_paraphrase(bank.seen_templates[0], FableSpec(character="only a character"))
+
+
+from tinyfables.paraphrases import CANONICAL, HELD_OUT_TEMPLATE, SEEN_TEMPLATE, RowResult, select_row
+
+
+def _fixture_prompt():
+    import json
+
+    return json.loads(FIXTURE.read_text().splitlines()[0])["prompt"]
+
+
+def test_select_coverage_zero_is_canonical_unchanged():
+    bank = load_bank(BANK_PATH)
+    text = _fixture_prompt()
+    r = select_row(text, 0, coverage=0.0, seed=0, bank=bank)
+    assert r == RowResult(text, CANONICAL, False)
+
+
+def test_select_none_bank_is_canonical():
+    text = _fixture_prompt()
+    assert select_row(text, 0, coverage=0.5, seed=0, bank=None).family == CANONICAL
+
+
+def test_select_coverage_one_always_paraphrases_with_seen():
+    bank = load_bank(BANK_PATH)
+    text = _fixture_prompt()
+    held_out_texts = {render_paraphrase(t, parse_canonical_prompt(text)) for t in bank.held_out_templates}
+    for i in range(200):
+        r = select_row(text, i, coverage=1.0, seed=0, bank=bank)
+        assert r.family == SEEN_TEMPLATE
+        assert r.prompt != text
+        assert r.prompt not in held_out_texts  # held-out phrasing never produced
+
+
+def test_select_is_deterministic():
+    bank = load_bank(BANK_PATH)
+    text = _fixture_prompt()
+    a = [select_row(text, i, 0.5, 0, bank) for i in range(50)]
+    b = [select_row(text, i, 0.5, 0, bank) for i in range(50)]
+    assert a == b
+
+
+def test_select_never_reports_held_out_family():
+    bank = load_bank(BANK_PATH)
+    text = _fixture_prompt()
+    fams = {select_row(text, i, 0.5, s, bank).family for s in range(5) for i in range(200)}
+    assert HELD_OUT_TEMPLATE not in fams
+    assert fams <= {CANONICAL, SEEN_TEMPLATE}
+
+
+def test_select_flags_parse_failure_when_bank_active():
+    bank = load_bank(BANK_PATH)
+    r = select_row("not a canonical prompt", 0, coverage=1.0, seed=0, bank=bank)
+    assert r == RowResult("not a canonical prompt", CANONICAL, True)
+
+
+def test_load_families_round_trip(tmp_path):
+    import numpy as np
+
+    from tinyfables.paraphrases import FAMILIES, load_families
+
+    p = tmp_path / "families.bin"
+    p.write_bytes(np.array([0, 1, 0, 1, 2], dtype=np.uint8).tobytes())
+    arr = load_families(p)
+    assert arr.dtype == np.uint8
+    assert [FAMILIES[c] for c in arr] == [
+        "canonical", "seen-template", "canonical", "seen-template", "held-out-template",
+    ]

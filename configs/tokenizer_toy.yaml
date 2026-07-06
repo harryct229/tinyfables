@@ -1,0 +1,5 @@
+source:
+  jsonl_path: tests/fixtures/tiny_corpus.jsonl
+vocab_size: 512
+seed: 0
+compare_gpt2: false

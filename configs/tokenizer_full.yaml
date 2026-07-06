@@ -1,0 +1,8 @@
+# Real run (issue 04, Colab): tokenizer trained on a 50k-fable sample.
+source:
+  hf_dataset: klusai/ds-tf1-en-3m
+  hf_split: train
+  max_rows: 50000
+vocab_size: 8192
+seed: 0
+compare_gpt2: true   # produces the ADR-0002 report figure

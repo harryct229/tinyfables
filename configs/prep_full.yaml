@@ -1,0 +1,8 @@
+# Real run (issue 04, Colab): ~450k fables ≈ 250M tokens (design.md data budget).
+source:
+  hf_dataset: klusai/ds-tf1-en-3m
+  hf_split: train
+  max_rows: 450000
+tokenizer_dir: runs/tokenizer_full
+window: 1024
+seed: 0

@@ -1,0 +1,5 @@
+source:
+  jsonl_path: tests/fixtures/tiny_corpus.jsonl
+tokenizer_dir: runs/tokenizer_toy
+window: 256
+seed: 0

@@ -67,3 +67,9 @@ def test_prep_is_hash_deterministic(tmp_path, tok_dir):
     a = json.loads((run_prep(tmp_path, tok_dir, "a") / "manifest.json").read_text())
     b = json.loads((run_prep(tmp_path, tok_dir, "b") / "manifest.json").read_text())
     assert a["artifacts"] == b["artifacts"]
+
+
+def test_run_rejects_oversized_vocab(tmp_path, tok_dir, monkeypatch):
+    monkeypatch.setattr("tokenizers.Tokenizer.get_vocab_size", lambda self: 70000)
+    with pytest.raises(ValueError):
+        prep_stage.run(prep_cfg(tok_dir), tmp_path / "oversized")

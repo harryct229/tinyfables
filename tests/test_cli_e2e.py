@@ -30,7 +30,10 @@ def test_toy_chain_via_cli_under_two_minutes(tmp_path):
 
     for stage_dir, expected in [
         (tmp_path / "runs" / "tok", {"tokenizer.json", "compression_report.json", "manifest.json"}),
-        (tmp_path / "runs" / "prep", {"tokens.bin", "mask.bin", "prep_summary.json", "manifest.json"}),
+        (
+            tmp_path / "runs" / "prep",
+            {"tokens.bin", "mask.bin", "families.bin", "prep_summary.json", "manifest.json"},
+        ),
     ]:
         assert {p.name for p in stage_dir.iterdir()} == expected
         manifest = json.loads((stage_dir / "manifest.json").read_text())

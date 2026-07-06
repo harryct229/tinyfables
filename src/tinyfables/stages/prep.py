@@ -22,6 +22,7 @@ from tokenizers import Tokenizer
 from tinyfables.config import PrepConfig
 from tinyfables.constants import EOT
 from tinyfables.data import iter_rows
+from tinyfables.paraphrases import FAMILIES, load_bank, select_row
 from tinyfables.stage import write_manifest
 
 
@@ -43,6 +44,11 @@ def run(cfg: PrepConfig, out_dir: Path) -> None:
 
     tokens_path = out_dir / "tokens.bin"
     mask_path = out_dir / "mask.bin"
+    families_path = out_dir / "families.bin"
+    bank = load_bank(cfg.paraphrase_bank) if cfg.paraphrase_bank else None
+    families: list[int] = []
+    fam_counts = {name: 0 for name in FAMILIES}
+    n_parse_failures = 0
 
     toks_buf: list[int] = []
     mask_buf: list[int] = []
@@ -62,9 +68,14 @@ def run(cfg: PrepConfig, out_dir: Path) -> None:
             toks_buf.clear()
             mask_buf.clear()
 
-        for r in iter_rows(cfg.source, cfg.seed):
+        for i, r in enumerate(iter_rows(cfg.source, cfg.seed)):
             n_rows += 1
-            p = tok.encode(r["prompt"]).ids
+            row = select_row(r["prompt"], i, cfg.paraphrase_coverage, cfg.seed, bank)
+            fam_counts[row.family] += 1
+            families.append(FAMILIES.index(row.family))
+            if row.parse_failed:
+                n_parse_failures += 1
+            p = tok.encode(row.prompt).ids
             f = tok.encode(r["fable"]).ids
             toks_buf.extend(p)
             mask_buf.extend([0] * len(p))
@@ -92,6 +103,8 @@ def run(cfg: PrepConfig, out_dir: Path) -> None:
     else:
         loss_token_total = 0
 
+    families_path.write_bytes(np.asarray(families, dtype=np.uint8).tobytes())
+
     summary = {
         "n_rows": n_rows,
         "window": cfg.window,
@@ -102,14 +115,21 @@ def run(cfg: PrepConfig, out_dir: Path) -> None:
         "n_fable_tokens_total": n_fable,
         "loss_token_fraction": round(loss_token_total / n_keep, 4) if n_keep else 0.0,
         "vocab_size": tok.get_vocab_size(),
+        "paraphrase_coverage": cfg.paraphrase_coverage,
+        "n_parse_failures": n_parse_failures,
+        "family_counts": fam_counts,
     }
     summary_path = out_dir / "prep_summary.json"
     summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
+
+    inputs = {"tokenizer.json": tokenizer_path}
+    if cfg.paraphrase_bank:
+        inputs["paraphrases.yaml"] = Path(cfg.paraphrase_bank)
 
     write_manifest(
         out_dir,
         "prep",
         cfg,
-        [tokens_path, mask_path, summary_path],
-        inputs={"tokenizer.json": tokenizer_path},
+        [tokens_path, mask_path, families_path, summary_path],
+        inputs=inputs,
     )

@@ -106,13 +106,17 @@ def test_rejects_duplicate_ids(tmp_path):
 
 
 def test_rejects_non_bool_held_out(tmp_path):
-    bad = (
-        "  - id: t1\n"
+    # GOOD_TEMPLATE is a valid seen template, so this bank canNOT trip the
+    # "no seen templates" guard — the ValueError must come from the held_out
+    # type check itself. (Without that check, `bool("false")` is truthy and the
+    # bad template would be silently mis-flagged as held-out, raising nothing.)
+    bad = GOOD_TEMPLATE + (
+        "  - id: t2\n"
         "    held_out: \"false\"\n"  # quoted -> YAML string, not a bool
         "    text: |-\n"
         "      {character}/{setting}/{challenge}/{outcome}/{moral}.\n"
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="held_out"):
         load_bank(write_bank(tmp_path, bad))
 
 

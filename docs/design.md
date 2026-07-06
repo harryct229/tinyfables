@@ -191,4 +191,4 @@ grid, win-rate chart, retrospective).
 | PPO instability / reward hacking | KL anchor, length-drift alarm, DPO fallback documented in advance |
 | AI labeler bias / inconsistency | position-swap audit, calibration re-labeling, sampled justifications hand-reviewed |
 | Judge circularity (labeler grading its own taste) | eval judge is a different model family (Gemini); blind human eval is the headline |
-| Course requires literal human feedback | professor asked in week 1; ~5h human Gold Set bolt-on documented and ready — validates AI labels, nothing retrained |
+| ~~Course requires literal human feedback~~ | **Resolved 2026-07-06: professor signed off on RLAIF.** Gold Set bolt-on stays documented but inactive |

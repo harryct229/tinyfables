@@ -173,9 +173,9 @@ headline — and the whole design is documented in ADRs the report is built from
 
 - The schedule and its three go/no-go gates (week-1 T4 benchmark, week-4 labeler-audit +
   reward-model gate, week-5 PPO-or-DPO decision) live in the decision record and bind this PRD.
-- **The one action item only the human can do**: ask the professor in week 1 whether AI
-  preference feedback satisfies the course's RLHF requirement. The Gold Set fallback is cheap
-  (~5 hours) but only if triggered early.
+- ~~The one action item only the human can do~~ **Resolved 2026-07-06**: the professor signed
+  off on AI preference feedback satisfying the RLHF requirement. The Gold Set fallback remains
+  documented but inactive.
 - The report and title must say RLAIF, framed as "the full RLHF pipeline with AI preference
   feedback" — honesty about the H is a graded strength, not a confession.
 - Vocabulary in this PRD is normative and defined in the glossary: Fable, Moral, Element,

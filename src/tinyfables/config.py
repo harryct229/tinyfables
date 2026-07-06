@@ -65,6 +65,33 @@ class PretrainConfig:
     resume_from: str | None = None
     device: str = "cpu"
     seed: int = 0
+    amp: bool = False
+    ckpt_dir: str | None = None
+    ckpt_every: int = 0
+    keep_last_k: int = 2
+    log_every: int = 0
+    trackio_project: str | None = None
+    trackio_space_id: str | None = None
+    run_name: str | None = None
+    ckpt_hub_repo: str | None = None
+
+
+@dataclass(frozen=True)
+class BenchmarkConfig:
+    tokenizer_dir: str
+    n_layer: int = 6
+    n_head: int = 6
+    d_model: int = 384
+    n_ctx: int = 1024
+    batch_size: int = 16
+    window: int = 1024
+    warmup_steps: int = 5
+    measure_steps: int = 20
+    token_budget: int = 250_000_000
+    target_tokens_per_sec: float = 0.0
+    amp: bool = True
+    device: str = "auto"
+    seed: int = 0
 
 
 def _build(cls: type[T], data: Any) -> T:

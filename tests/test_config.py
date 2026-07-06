@@ -114,3 +114,50 @@ def test_prep_coverage_requires_bank():
             tokenizer_dir="t",
             paraphrase_coverage=0.2,
         )
+
+
+def test_benchmark_config_defaults_and_overrides(tmp_path):
+    from tinyfables.config import BenchmarkConfig, load_config
+
+    p = tmp_path / "b.yaml"
+    p.write_text("tokenizer_dir: runs/tok\nmeasure_steps: 30\ntarget_tokens_per_sec: 8000\n")
+    cfg = load_config(p, BenchmarkConfig)
+    assert cfg.tokenizer_dir == "runs/tok"
+    assert cfg.measure_steps == 30 and cfg.target_tokens_per_sec == 8000
+    assert cfg.n_layer == 6 and cfg.window == 1024 and cfg.amp is True  # design defaults
+
+
+def test_pretrain_config_new_knobs_default_to_current_behavior(tmp_path):
+    from tinyfables.config import PretrainConfig, load_config
+
+    p = tmp_path / "p.yaml"
+    p.write_text("prep_dir: runs/prep\ntokenizer_dir: runs/tok\n")
+    cfg = load_config(p, PretrainConfig)
+    assert cfg.amp is False and cfg.ckpt_dir is None and cfg.ckpt_every == 0
+    assert cfg.log_every == 0 and cfg.keep_last_k == 2
+    assert cfg.trackio_project is None and cfg.run_name is None and cfg.ckpt_hub_repo is None
+
+
+def test_pretrain_config_accepts_issue04_knobs(tmp_path):
+    from tinyfables.config import PretrainConfig, load_config
+
+    p = tmp_path / "p.yaml"
+    p.write_text(
+        "prep_dir: runs/prep\ntokenizer_dir: runs/tok\n"
+        "amp: true\nckpt_dir: /content/drive/MyDrive/ckpt\nckpt_every: 500\n"
+        "log_every: 50\ntrackio_project: tinyfables\nrun_name: base-v1\n"
+    )
+    cfg = load_config(p, PretrainConfig)
+    assert cfg.amp is True and cfg.ckpt_every == 500 and cfg.log_every == 50
+    assert cfg.ckpt_dir.endswith("/ckpt") and cfg.run_name == "base-v1"
+
+
+def test_benchmark_config_rejects_unknown_key(tmp_path):
+    import pytest
+
+    from tinyfables.config import BenchmarkConfig, load_config
+
+    p = tmp_path / "b.yaml"
+    p.write_text("tokenizer_dir: runs/tok\nbogus: 1\n")
+    with pytest.raises(KeyError):
+        load_config(p, BenchmarkConfig)

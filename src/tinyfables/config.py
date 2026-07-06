@@ -40,6 +40,26 @@ class PrepConfig:
     seed: int = 0
 
 
+@dataclass(frozen=True)
+class PretrainConfig:
+    prep_dir: str
+    tokenizer_dir: str
+    n_layer: int = 6
+    n_head: int = 6
+    d_model: int = 384
+    n_ctx: int = 1024
+    batch_size: int = 16
+    steps: int = 1000
+    lr: float = 3e-4
+    weight_decay: float = 0.1
+    warmup_steps: int = 100
+    grad_clip: float = 1.0
+    save_every: int = 0
+    resume_from: str | None = None
+    device: str = "cpu"
+    seed: int = 0
+
+
 def _build(cls: type[T], data: Any) -> T:
     if not isinstance(data, dict):
         raise TypeError(f"expected a mapping for {cls.__name__}, got {type(data).__name__}")

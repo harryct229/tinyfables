@@ -1,0 +1,127 @@
+# Paraphrased Prompt bank (issue 03). Versioned, human-curated.
+# Every template slot-fills all five Elements verbatim; {age_range}/{word_count}
+# are optional. Exactly five templates are held_out: true — they are NEVER used
+# in training (select_row draws only from held_out: false), and are the
+# measuring stick for the augmentation robustness grid (issues 05/10).
+version: 1
+templates:
+  - id: seen-prose-01
+    held_out: false
+    text: |-
+      Write a short moral fable for children ages {age_range}, around {word_count} words. The hero is {character}, the setting is {setting}, and the central challenge is {challenge}. It should end when {outcome}, teaching the lesson: {moral}.
+  - id: seen-fields-02
+    held_out: false
+    text: |-
+      Tell me a fable (about {word_count} words, suitable for ages {age_range}). Main character: {character}. Setting: {setting}. Challenge: {challenge}. Outcome: {outcome}. Moral: {moral}.
+  - id: seen-gentle-03
+    held_out: false
+    text: |-
+      Compose a gentle fable for ages {age_range}. It stars {character} in {setting}, who must face {challenge}. In the end, {outcome}, and the story teaches that {moral}. Keep it to roughly {word_count} words.
+  - id: seen-young-04
+    held_out: false
+    text: |-
+      Please write a ~{word_count}-word fable for young readers ({age_range}) about {character}. Set it in {setting}. The problem to overcome is {challenge}; by the close, {outcome}. Leave the reader with this moral: {moral}.
+  - id: seen-request-05
+    held_out: false
+    text: |-
+      I'd like a fable starring {character}, set in {setting}. The story turns on {challenge} and resolves as {outcome}. Its moral: {moral}. Aim for about {word_count} words, appropriate for ages {age_range}.
+  - id: seen-craft-06
+    held_out: false
+    text: |-
+      Craft a fable in which {character} finds themselves in {setting} and must deal with {challenge}. Ultimately, {outcome}. The lesson readers should take away is: {moral}. Length: about {word_count} words, for ages {age_range}.
+  - id: seen-equals-07
+    held_out: false
+    text: |-
+      A writing task: produce a short fable (ages {age_range}, ~{word_count} words). Character = {character}; place = {setting}; challenge = {challenge}; ending = {outcome}; moral = {moral}.
+  - id: seen-continue-08
+    held_out: false
+    text: |-
+      Once upon a time there was {character} living in {setting}. Continue this into a full fable about {challenge}, ending with {outcome} and the moral that {moral}. Write it for ages {age_range} in about {word_count} words.
+  - id: seen-bedtime-09
+    held_out: false
+    text: |-
+      Write a bedtime fable for a {age_range} year-old, about {word_count} words long. Feature {character} in {setting}, dealing with {challenge}. Make sure {outcome}, and that the tale clearly teaches: {moral}.
+  - id: seen-labels-10
+    held_out: false
+    text: |-
+      Your task: a moral fable. Protagonist: {character}. Location: {setting}. Conflict: {challenge}. Resolution: {outcome}. Takeaway: {moral}. Write it for ages {age_range}, ~{word_count} words.
+  - id: seen-explore-11
+    held_out: false
+    text: |-
+      Create a fable for young children (ages {age_range}) about {character} who lives in {setting}. The fable should explore {challenge}, arrive at {outcome}, and end on the moral: {moral}. Keep it near {word_count} words.
+  - id: seen-spin-12
+    held_out: false
+    text: |-
+      Spin a short tale-with-a-lesson: {character}, in {setting}, wrestles with {challenge}. It should end when {outcome}. The moral of the story is {moral}. Target length ~{word_count} words for ages {age_range}.
+  - id: seen-needs-13
+    held_out: false
+    text: |-
+      Write a fable. Here's what it needs: a main character ({character}), a setting ({setting}), a challenge ({challenge}), an outcome ({outcome}), and a clear moral ({moral}). Keep it about {word_count} words and suitable for ages {age_range}.
+  - id: seen-book-14
+    held_out: false
+    text: |-
+      For a children's book (ages {age_range}), draft a ~{word_count}-word fable. The story follows {character} through {setting}, centers on {challenge}, and finishes with {outcome}. The moral to convey: {moral}.
+  - id: seen-give-15
+    held_out: false
+    text: |-
+      Give me a fable about {character}. Where it happens: {setting}. The challenge: {challenge}. How it ends: {outcome}. The moral: {moral}. Please keep it short (about {word_count} words) and age-appropriate for {age_range}.
+  - id: seen-imagine-16
+    held_out: false
+    text: |-
+      Imagine {character} in {setting}. Write their fable: they confront {challenge}, and in the end {outcome}. Close with the moral that {moral}. Aim for {word_count} words, readable by ages {age_range}.
+  - id: seen-terse-17
+    held_out: false
+    text: |-
+      Short fable request — hero: {character}; world: {setting}; trouble: {challenge}; how it wraps up: {outcome}; lesson: {moral}. Roughly {word_count} words, for ages {age_range}.
+  - id: seen-must-18
+    held_out: false
+    text: |-
+      Write a moral story (a fable) of about {word_count} words for ages {age_range}. It must include {character} as the main character, take place in {setting}, revolve around {challenge}, conclude with {outcome}, and end by teaching {moral}.
+  - id: seen-plain-19
+    held_out: false
+    text: |-
+      Draft a fable where the main character is {character} and the setting is {setting}. The challenge they face is {challenge}. The outcome is {outcome}. The moral is {moral}. Write about {word_count} words for ages {age_range}.
+  - id: seen-canyou-20
+    held_out: false
+    text: |-
+      Can you write a little fable? It's about {character} in {setting}, facing {challenge}. It ends with {outcome}, and the moral is {moral}. Keep it around {word_count} words, for kids ages {age_range}.
+  - id: seen-brief-21
+    held_out: false
+    text: |-
+      Fable brief — Audience: ages {age_range}. Length: ~{word_count} words. Star: {character}. Place: {setting}. Central challenge: {challenge}. Ending: {outcome}. Moral: {moral}.
+  - id: seen-suited-22
+    held_out: false
+    text: |-
+      Please compose a fable suited to ages {age_range}. Center it on {character} in {setting}. Build the plot around {challenge}, resolve it so that {outcome}, and finish with the moral: {moral}. About {word_count} words.
+  - id: seen-animal-23
+    held_out: false
+    text: |-
+      Write me a short animal-fable-style story (~{word_count} words, ages {age_range}) featuring {character}, set in {setting}. The heart of it is {challenge}; it ends when {outcome}; and it teaches: {moral}.
+  - id: seen-new-24
+    held_out: false
+    text: |-
+      New fable. Main character: {character}. Setting: {setting}. The challenge at its core: {challenge}. By the end: {outcome}. Moral to land: {moral}. Keep to about {word_count} words, ages {age_range}.
+  - id: seen-lesson-25
+    held_out: false
+    text: |-
+      Tell a story that teaches a lesson. {character} is in {setting} and must handle {challenge}. Things resolve when {outcome}. The lesson: {moral}. Make it about {word_count} words and fit for ages {age_range}.
+  - id: heldout-minimal-01
+    held_out: true
+    text: |-
+      A fable about {character} in {setting}: they face {challenge}, then {outcome}. Moral — {moral}.
+  - id: heldout-question-02
+    held_out: true
+    text: |-
+      What happens when {character} in {setting} must confront {challenge}? Write the fable; make it end with {outcome} and teach that {moral}. Keep it around {word_count} words for ages {age_range}.
+  - id: heldout-json-03
+    held_out: true
+    text: |-
+      Write a fable from this spec: {{"character": "{character}", "setting": "{setting}", "challenge": "{challenge}", "outcome": "{outcome}", "moral": "{moral}"}}. Suitable for ages {age_range}, about {word_count} words.
+  - id: heldout-letter-04
+    held_out: true
+    text: |-
+      Dear storyteller, please write us a fable for our ages-{age_range} class (about {word_count} words). We'd love it to be about {character} in {setting}, to deal with {challenge}, to end with {outcome}, and to teach {moral}. Thank you!
+  - id: heldout-headline-05
+    held_out: true
+    text: |-
+      Fable, ~{word_count} words, ages {age_range}. {character} + {setting} + {challenge} -> {outcome}. Lesson: {moral}.

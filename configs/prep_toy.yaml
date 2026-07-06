@@ -3,3 +3,5 @@ source:
 tokenizer_dir: runs/tokenizer_toy
 window: 256
 seed: 0
+paraphrase_bank: configs/paraphrases.yaml
+paraphrase_coverage: 0.15

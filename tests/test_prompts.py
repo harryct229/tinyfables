@@ -29,3 +29,12 @@ def test_partial_spec_omits_missing_elements():
     assert "- Setting:" not in text
     assert "- Teaching:" not in text
     assert text.endswith("and about 60 words.")
+
+
+def test_age_word_line_matches_renderer_output():
+    from tinyfables.prompts import AGE_WORD_LINE, FableSpec, render_canonical_prompt
+
+    spec = FableSpec(character="a mouse", age_range="4-7", word_count=60)
+    assert render_canonical_prompt(spec).endswith(
+        AGE_WORD_LINE.format(age_range="4-7", word_count=60)
+    )

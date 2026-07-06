@@ -54,7 +54,6 @@ class PretrainConfig:
     weight_decay: float = 0.1
     warmup_steps: int = 100
     grad_clip: float = 1.0
-    save_every: int = 0
     resume_from: str | None = None
     device: str = "cpu"
     seed: int = 0

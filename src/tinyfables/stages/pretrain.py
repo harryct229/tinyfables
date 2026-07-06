@@ -126,6 +126,7 @@ def run(cfg: PretrainConfig, out_dir: Path) -> None:
         cfg,
         [
             out_dir / "config.json",
+            out_dir / "generation_config.json",
             out_dir / "model.safetensors",
             out_dir / "optimizer.pt",
             out_dir / "pretrain_summary.json",

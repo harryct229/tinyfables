@@ -8,7 +8,7 @@ as issues, apply `ready-for-agent`, and link back to the PRD as parent). All iss
 |---|-------|-----------|------|
 | 01 | [Stage-contract skeleton: data prep + tokenizer](./01-stage-contract-skeleton.md) | — | ☑ |
 | 02 | [Walking skeleton: hand-written GPT writes its first fable](./02-walking-skeleton-model-generate.md) | 01 | ☑ |
-| 03 | [Paraphrased Prompts: template bank + rendering](./03-paraphrased-prompts.md) | 01 | ☐ |
+| 03 | [Paraphrased Prompts: template bank + rendering](./03-paraphrased-prompts.md) | 01 | ☑ |
 | 04 | [Real Base Model on free Colab](./04-real-base-model-colab.md) | 02, 03 | ☐ |
 | 05 | [Mechanical eval suite](./05-mechanical-eval-suite.md) | 02 | ☐ |
 | 06 | [Feedback data: Rubric, pairs, AI Labeler, audits](./06-feedback-data-labeler.md) | 02 (toy), 04 (real) | ☐ |

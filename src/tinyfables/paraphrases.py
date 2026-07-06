@@ -12,11 +12,14 @@ held-out leakage is checkable directly in the artifacts."""
 from __future__ import annotations
 
 import random
+import re
 import string
 from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
+
+from tinyfables.prompts import AGE_WORD_LINE, CANONICAL_HEADER, ELEMENT_FIELDS
 
 # Prompt-family tags. The list index is the uint8 code written to families.bin.
 CANONICAL = "canonical"
@@ -24,11 +27,17 @@ SEEN_TEMPLATE = "seen-template"
 HELD_OUT_TEMPLATE = "held-out-template"
 FAMILIES = [CANONICAL, SEEN_TEMPLATE, HELD_OUT_TEMPLATE]
 
-# The five story Elements every template must slot in verbatim. In Task 2 this
-# is re-derived from prompts.ELEMENT_FIELDS so it cannot drift from the renderer.
-_ELEMENT_SLOTS = ("character", "setting", "challenge", "outcome", "moral")
+# The five story Elements every template must slot in verbatim. Derived from
+# prompts.ELEMENT_FIELDS so it cannot drift from the renderer.
+_ELEMENT_SLOTS = tuple(field for field, _label in ELEMENT_FIELDS)
 _OPTIONAL_SLOTS = ("age_range", "word_count")
 _ALLOWED_SLOTS = frozenset(_ELEMENT_SLOTS) | frozenset(_OPTIONAL_SLOTS)
+
+_LABEL_TO_FIELD = {label: field for field, label in ELEMENT_FIELDS}
+# Mirrors prompts.AGE_WORD_LINE; test_age_word_line_matches_renderer_output guards drift.
+_AGE_WORD_RE = re.compile(
+    r"^Keep it age-appropriate for ages (?P<age_range>.+?) and about (?P<word_count>\d+) words\.$"
+)
 
 
 @dataclass(frozen=True)
@@ -36,6 +45,17 @@ class Template:
     id: str
     held_out: bool
     text: str
+
+
+@dataclass(frozen=True)
+class ParsedPrompt:
+    character: str | None = None
+    setting: str | None = None
+    challenge: str | None = None
+    outcome: str | None = None
+    moral: str | None = None
+    age_range: str = "4-7"
+    word_count: int = 60
 
 
 @dataclass(frozen=True)
@@ -94,3 +114,27 @@ def load_bank(path: str | Path) -> ParaphraseBank:
     if not any(not t.held_out for t in templates):
         raise ValueError("bank has no seen (training) templates")
     return ParaphraseBank(version=int(data["version"]), templates=tuple(templates))
+
+
+def parse_canonical_prompt(text: str) -> ParsedPrompt | None:
+    """Recover Element values from a rendered Canonical Prompt, or None if `text`
+    is not the canonical structure (header + 5 element bullets + age/word line).
+    Values are verbatim (split on the first ': ')."""
+    lines = text.split("\n")
+    if len(lines) != len(ELEMENT_FIELDS) + 2 or lines[0] != CANONICAL_HEADER:
+        return None
+    values: dict[str, object] = {}
+    for line in lines[1:-1]:
+        if not line.startswith("- ") or ": " not in line:
+            return None
+        label, value = line[2:].split(": ", 1)
+        field = _LABEL_TO_FIELD.get(label)
+        if field is None:
+            return None
+        values[field] = value
+    if set(values) != set(_ELEMENT_SLOTS):
+        return None
+    m = _AGE_WORD_RE.match(lines[-1])
+    if m is None:
+        return None
+    return ParsedPrompt(age_range=m["age_range"], word_count=int(m["word_count"]), **values)

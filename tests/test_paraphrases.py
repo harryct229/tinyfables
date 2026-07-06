@@ -115,3 +115,67 @@ def test_committed_bank_ids_are_unique():
     bank = load_bank(BANK_PATH)
     ids = [t.id for t in bank.templates]
     assert len(ids) == len(set(ids))
+
+
+from tinyfables.paraphrases import ParsedPrompt, parse_canonical_prompt
+from tinyfables.prompts import FableSpec, render_canonical_prompt
+
+FIXTURE = Path(__file__).parent / "fixtures" / "tiny_corpus.jsonl"
+
+
+def test_parse_recovers_fixture_elements():
+    import json
+
+    row0 = json.loads(FIXTURE.read_text().splitlines()[0])
+    parsed = parse_canonical_prompt(row0["prompt"])
+    assert parsed == ParsedPrompt(
+        character="a shy octopus",
+        setting="a quiet tide pool",
+        challenge="doubting oneself",
+        outcome="a friend helps just in time",
+        moral="courage grows by small steps",
+        age_range="4-7",
+        word_count=60,
+    )
+
+
+def test_parse_round_trips_renderer():
+    spec = FableSpec(
+        character="a bold hare",
+        setting="a windy hill",
+        challenge="a river to cross",
+        outcome="the bridge holds",
+        moral="patience pays",
+        age_range="8-10",
+        word_count=120,
+    )
+    parsed = parse_canonical_prompt(render_canonical_prompt(spec))
+    assert parsed is not None
+    for field in ("character", "setting", "challenge", "outcome", "moral", "age_range", "word_count"):
+        assert getattr(parsed, field) == getattr(spec, field)
+
+
+def test_parse_preserves_value_containing_colon():
+    spec = FableSpec(
+        character="a mole",
+        setting="a burrow",
+        challenge="a riddle: what walks at dawn?",
+        outcome="the riddle is solved",
+        moral="think before you dig",
+        age_range="4-7",
+        word_count=60,
+    )
+    parsed = parse_canonical_prompt(render_canonical_prompt(spec))
+    assert parsed.challenge == "a riddle: what walks at dawn?"
+
+
+def test_parse_returns_none_on_non_canonical():
+    assert parse_canonical_prompt("Just write me a fable about a cat, please.") is None
+
+
+def test_parse_returns_none_when_an_element_is_missing():
+    # A canonical-looking prompt with only four bullets must not parse.
+    text = render_canonical_prompt(
+        FableSpec(character="a", setting="b", challenge="c", outcome="d", moral="e")
+    ).replace("- Teaching: e\n", "")
+    assert parse_canonical_prompt(text) is None

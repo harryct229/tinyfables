@@ -21,6 +21,12 @@ _ELEMENTS = [
     ("moral", "Teaching"),
 ]
 
+# Public views for parsers/renderers (paraphrases.py) so the parser cannot drift
+# from this module's canonical template.
+CANONICAL_HEADER = _HEADER
+ELEMENT_FIELDS = tuple(_ELEMENTS)
+AGE_WORD_LINE = "Keep it age-appropriate for ages {age_range} and about {word_count} words."
+
 
 @dataclass(frozen=True)
 class FableSpec:
@@ -39,7 +45,5 @@ def render_canonical_prompt(spec: FableSpec) -> str:
         value = getattr(spec, field)
         if value is not None:
             lines.append(f"- {label}: {value}")
-    lines.append(
-        f"Keep it age-appropriate for ages {spec.age_range} and about {spec.word_count} words."
-    )
+    lines.append(AGE_WORD_LINE.format(age_range=spec.age_range, word_count=spec.word_count))
     return "\n".join(lines)

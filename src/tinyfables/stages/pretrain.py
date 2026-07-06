@@ -9,6 +9,8 @@ step. So train-N equals train-k then resume then train-(N-k) exactly."""
 from __future__ import annotations
 
 import json
+import shutil
+import time
 from pathlib import Path
 
 import numpy as np
@@ -17,6 +19,7 @@ from tokenizers import Tokenizer
 
 from tinyfables.checkpoint import find_latest_checkpoint, load_checkpoint, prune_checkpoints, save_checkpoint
 from tinyfables.config import PretrainConfig
+from tinyfables.metrics import MetricsLogger, plot_loss_curve
 from tinyfables.model import GPT, GPTConfig
 from tinyfables.stage import write_manifest
 
@@ -114,6 +117,20 @@ def run(cfg: PretrainConfig, out_dir: Path) -> None:
         optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
         start_step = 0
 
+    csv_path = Path(cfg.ckpt_dir or out_dir) / "loss_log.csv"
+    logger = MetricsLogger(
+        csv_path,
+        project=cfg.trackio_project,
+        run_name=cfg.run_name,
+        space_id=cfg.trackio_space_id,
+        config={"n_layer": cfg.n_layer, "d_model": cfg.d_model, "n_head": cfg.n_head,
+                "n_ctx": cfg.n_ctx, "batch_size": cfg.batch_size, "steps": cfg.steps,
+                "lr": cfg.lr, "amp": use_amp},
+    )
+    tokens_per_step = cfg.batch_size * window
+    t_log = time.perf_counter()
+    steps_since_log = 0
+
     model.train()
     last_loss = float("nan")
     for step in range(start_step, cfg.steps):
@@ -137,11 +154,26 @@ def run(cfg: PretrainConfig, out_dir: Path) -> None:
             if cfg.ckpt_hub_repo:
                 _mirror_checkpoint(cfg.ckpt_dir, cfg.ckpt_hub_repo)
 
+        steps_since_log += 1
+        if cfg.log_every and completed % cfg.log_every == 0:
+            now = time.perf_counter()
+            tps = (steps_since_log * tokens_per_step) / (now - t_log) if now > t_log else 0.0
+            logger.log(step=completed, loss=last_loss, lr=lr_at(step, cfg), tokens_per_sec=tps)
+            t_log = now
+            steps_since_log = 0
+
     model.save_pretrained(out_dir)
     torch.save(
         {"optimizer": optimizer.state_dict(), "scaler": scaler.state_dict() if use_amp else None, "step": cfg.steps},
         out_dir / "optimizer.pt",
     )
+
+    logger.log(step=cfg.steps, loss=last_loss, lr=lr_at(max(cfg.steps - 1, 0), cfg), tokens_per_sec=0.0)
+    logger.finish()
+    out_csv = out_dir / "loss_log.csv"
+    if csv_path != out_csv:
+        shutil.copyfile(csv_path, out_csv)
+    png = plot_loss_curve(out_csv, out_dir / "loss_curve.png")
 
     n_params = sum(p.numel() for p in {id(p): p for p in model.parameters()}.values())
     summary_out = {
@@ -159,17 +191,21 @@ def run(cfg: PretrainConfig, out_dir: Path) -> None:
         json.dumps(summary_out, indent=2, sort_keys=True) + "\n"
     )
 
+    artifacts = [
+        out_dir / "config.json",
+        out_dir / "generation_config.json",
+        out_dir / "model.safetensors",
+        out_dir / "optimizer.pt",
+        out_dir / "pretrain_summary.json",
+        out_dir / "loss_log.csv",
+    ]
+    if png is not None:
+        artifacts.append(out_dir / "loss_curve.png")
     write_manifest(
         out_dir,
         "pretrain",
         cfg,
-        [
-            out_dir / "config.json",
-            out_dir / "generation_config.json",
-            out_dir / "model.safetensors",
-            out_dir / "optimizer.pt",
-            out_dir / "pretrain_summary.json",
-        ],
+        artifacts,
         inputs={
             "tokens.bin": prep_dir / "tokens.bin",
             "mask.bin": prep_dir / "mask.bin",

@@ -143,3 +143,31 @@ def test_ckpt_hub_mirror_invoked_when_configured(toy_shards, tmp_path, monkeypat
         tmp_path / "o",
     )
     assert seen and seen[-1][1] == "user/ckpts"
+
+
+def test_metrics_csv_and_manifest_artifact(toy_shards, tmp_path):
+    out = tmp_path / "m"
+    pretrain_stage.run(toy_cfg(toy_shards, steps=6, log_every=2), out)
+    csv_path = out / "loss_log.csv"
+    assert csv_path.exists()
+    import csv as _csv
+    rows = list(_csv.DictReader(open(csv_path)))
+    assert len(rows) >= 3  # steps 2, 4, and the final row
+    assert set(rows[0]) == {"step", "loss", "lr", "tokens_per_sec"}
+    manifest = json.loads((out / "manifest.json").read_text())
+    assert "loss_log.csv" in manifest["artifacts"]
+
+
+def test_metrics_csv_lives_in_ckpt_dir_then_copied(toy_shards, tmp_path):
+    ckpt = tmp_path / "ckpt"
+    out = tmp_path / "o"
+    pretrain_stage.run(toy_cfg(toy_shards, steps=4, log_every=1, ckpt_dir=str(ckpt)), out)
+    assert (ckpt / "loss_log.csv").exists()  # durable across session death (Drive)
+    assert (out / "loss_log.csv").exists()   # copied into the final stage dir
+
+
+def test_trackio_project_set_but_absent_does_not_crash(toy_shards, tmp_path):
+    # trackio is not installed; a configured project must degrade to CSV-only.
+    out = tmp_path / "t"
+    pretrain_stage.run(toy_cfg(toy_shards, steps=2, log_every=1, trackio_project="ignored", run_name="r"), out)
+    assert (out / "loss_log.csv").exists()

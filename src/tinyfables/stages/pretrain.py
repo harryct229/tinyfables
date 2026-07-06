@@ -77,11 +77,17 @@ def run(cfg: PretrainConfig, out_dir: Path) -> None:
     if n_windows < cfg.batch_size:
         raise ValueError(f"only {n_windows} windows for batch_size {cfg.batch_size}")
 
+    use_amp = cfg.amp and device == "cuda"
+    autocast_device = "cuda" if device == "cuda" else "cpu"
+    scaler = torch.amp.GradScaler(device, enabled=use_amp)
+
     if cfg.resume_from:
         model = GPT.from_pretrained(cfg.resume_from).to(device)
         optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
         state = torch.load(Path(cfg.resume_from) / "optimizer.pt", map_location=device)
         optimizer.load_state_dict(state["optimizer"])
+        if state.get("scaler") is not None:
+            scaler.load_state_dict(state["scaler"])
         start_step = state["step"]
     else:
         torch.manual_seed(cfg.seed)
@@ -96,14 +102,20 @@ def run(cfg: PretrainConfig, out_dir: Path) -> None:
             group["lr"] = lr_at(step, cfg)
         input_ids, labels = get_batch(tokens, mask, n_windows, window, cfg, step, device)
         optimizer.zero_grad(set_to_none=True)
-        out = model(input_ids=input_ids, labels=labels)
-        out.loss.backward()
+        with torch.amp.autocast(device_type=autocast_device, dtype=torch.float16, enabled=use_amp):
+            out = model(input_ids=input_ids, labels=labels)
+        scaler.scale(out.loss).backward()
+        scaler.unscale_(optimizer)
         torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
-        optimizer.step()
+        scaler.step(optimizer)
+        scaler.update()
         last_loss = out.loss.item()
 
     model.save_pretrained(out_dir)
-    torch.save({"optimizer": optimizer.state_dict(), "step": cfg.steps}, out_dir / "optimizer.pt")
+    torch.save(
+        {"optimizer": optimizer.state_dict(), "scaler": scaler.state_dict() if use_amp else None, "step": cfg.steps},
+        out_dir / "optimizer.pt",
+    )
 
     n_params = sum(p.numel() for p in {id(p): p for p in model.parameters()}.values())
     summary_out = {
@@ -115,6 +127,7 @@ def run(cfg: PretrainConfig, out_dir: Path) -> None:
         "window": window,
         "n_windows": n_windows,
         "device": device,
+        "amp": use_amp,
     }
     (out_dir / "pretrain_summary.json").write_text(
         json.dumps(summary_out, indent=2, sort_keys=True) + "\n"

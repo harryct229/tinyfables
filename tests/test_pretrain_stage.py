@@ -72,6 +72,25 @@ def test_stage_writes_checkpoint_and_manifest(toy_shards, tmp_path):
     assert 13_000 < summary["n_params"] < 10_000_000  # tiny model, sanity band
 
 
+def test_amp_flag_is_safe_noop_on_cpu(toy_shards, tmp_path):
+    # cfg.amp=True on CPU must not crash (GradScaler is disabled off-CUDA) and
+    # must still produce a usable checkpoint with finite loss.
+    out = tmp_path / "amp_cpu"
+    pretrain_stage.run(toy_cfg(toy_shards, steps=4, amp=True), out)
+    summary = json.loads((out / "pretrain_summary.json").read_text())
+    assert summary["steps"] == 4
+    import math
+    assert not math.isnan(summary["final_loss"])
+
+
+def test_final_optimizer_pt_has_scaler_key(toy_shards, tmp_path):
+    out = tmp_path / "sc"
+    pretrain_stage.run(toy_cfg(toy_shards, steps=2), out)
+    state = torch.load(out / "optimizer.pt", map_location="cpu")
+    assert "scaler" in state  # None on CPU (AMP off), but the key is always present
+    assert state["step"] == 2
+
+
 def test_resume_equality_within_tolerance(toy_shards, tmp_path):
     full = tmp_path / "full"
     part = tmp_path / "part"

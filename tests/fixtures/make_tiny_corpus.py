@@ -9,14 +9,27 @@ CHARACTERS = ["a shy octopus", "a stubborn raccoon", "a persuasive firefly", "a 
 SETTINGS = ["a quiet tide pool", "a misty marsh", "a deep canyon"]
 MORALS = ["courage grows by small steps", "timely help earns lasting loyalty"]
 
+# The real ds-tf1-en-3m canonical prompt (single-band: age group B, 4-7 years,
+# ~250 words), so the toy corpus exercises the same template the real model sees.
+# Must stay byte-identical to prompts.render_canonical_prompt (guarded by
+# test_full_spec_matches_fixture_canonical_prompt).
 PROMPT_TMPL = (
     "Create a fable based on the following elements. Weave them naturally into a story:\n"
-    "- Main Character: {character}\n"
-    "- Setting: {setting}\n"
-    "- Challenge: doubting oneself\n"
-    "- Outcome: a friend helps just in time\n"
-    "- Teaching: {moral}\n"
-    "Keep it age-appropriate for ages 4-7 and about 60 words."
+    "  - Main Character: {character}\n"
+    "  - Setting: {setting}\n"
+    "  - Challenge: doubting oneself\n"
+    "  - Outcome: a friend helps just in time\n"
+    "  - Teaching: {moral}\n"
+    "The fable should:\n"
+    "  - Be appropriate for age group B (4-7 years)\n"
+    "  - Use simple vocabulary that 4-7 year olds can understand\n"
+    "  - Use concrete rather than abstract language\n"
+    "  - Begin with vivid scene-setting\n"
+    "  - Not use names for the characters, instead use the trait and character\n"
+    "  - Include meaningful but simple dialogue\n"
+    "  - Show (don't tell) the character's growth\n"
+    "  - End with a clear connection to the moral\n"
+    "Keep the story concise but engaging, around 250 words."
 )
 
 FABLE_TMPL = (

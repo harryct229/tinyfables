@@ -4,7 +4,7 @@ tokenizer_dir: runs/tokenizer_toy
 n_layer: 2
 n_head: 2
 d_model: 64
-n_ctx: 256
+n_ctx: 512   # matches prep_toy window; fits the real-format prompt for the demo generate
 batch_size: 4
 steps: 100
 warmup_steps: 10

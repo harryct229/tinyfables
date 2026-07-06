@@ -19,7 +19,7 @@ from pathlib import Path
 
 import yaml
 
-from tinyfables.prompts import CANONICAL_HEADER, ELEMENT_FIELDS
+from tinyfables.prompts import CANONICAL_HEADER, ELEMENT_FIELDS, FABLE_SHOULD_HEADER, WORD_LINE
 
 # Prompt-family tags. The list index is the uint8 code written to families.bin.
 CANONICAL = "canonical"
@@ -33,10 +33,14 @@ _ELEMENT_SLOTS = tuple(field for field, _label in ELEMENT_FIELDS)
 _OPTIONAL_SLOTS = ("age_range", "word_count")
 _ALLOWED_SLOTS = frozenset(_ELEMENT_SLOTS) | frozenset(_OPTIONAL_SLOTS)
 
-_LABEL_TO_FIELD = {label: field for field, label in ELEMENT_FIELDS}
-# Mirrors prompts.AGE_WORD_LINE; test_age_word_line_matches_renderer_output guards drift.
-_AGE_WORD_RE = re.compile(
-    r"^Keep it age-appropriate for ages (?P<age_range>.+?) and about (?P<word_count>\d+) words\.$"
+# The age band lives in the first "The fable should:" style bullet.
+_AGE_GROUP_RE = re.compile(
+    r"^  - Be appropriate for age group [A-E] \((?P<age_range>.+?) years\)$"
+)
+# Derived from prompts.WORD_LINE so it cannot drift from the renderer; a guard
+# test (test_word_line_regex_matches_renderer_output) pins the two together.
+_WORD_LINE_RE = re.compile(
+    "^" + re.escape(WORD_LINE).replace(r"\{word_count\}", r"(?P<word_count>\d+)") + "$"
 )
 
 
@@ -55,7 +59,7 @@ class ParsedPrompt:
     outcome: str | None = None
     moral: str | None = None
     age_range: str = "4-7"
-    word_count: int = 60
+    word_count: int = 250
 
 
 @dataclass(frozen=True)
@@ -120,26 +124,34 @@ def load_bank(path: str | Path) -> ParaphraseBank:
 
 def parse_canonical_prompt(text: str) -> ParsedPrompt | None:
     """Recover Element values from a rendered Canonical Prompt, or None if `text`
-    is not the canonical structure (header + 5 element bullets + age/word line).
-    Values are verbatim (split on the first ': ')."""
+    is not the canonical structure (header, five two-space Element bullets in
+    order, the "The fable should:" block containing an age-group bullet, and the
+    word line). Element values are verbatim — everything after the
+    "  - {Label}: " prefix, so a colon inside a value survives."""
     lines = text.split("\n")
-    if len(lines) != len(ELEMENT_FIELDS) + 2 or lines[0] != CANONICAL_HEADER:
+    if not lines or lines[0] != CANONICAL_HEADER:
         return None
     values: dict[str, object] = {}
-    for line in lines[1:-1]:
-        if not line.startswith("- ") or ": " not in line:
+    i = 1
+    for field, label in ELEMENT_FIELDS:
+        prefix = f"  - {label}: "
+        if i >= len(lines) or not lines[i].startswith(prefix):
             return None
-        label, value = line[2:].split(": ", 1)
-        field = _LABEL_TO_FIELD.get(label)
-        if field is None:
-            return None
-        values[field] = value
-    if set(values) != set(_ELEMENT_SLOTS):
+        values[field] = lines[i][len(prefix):]
+        i += 1
+    if i >= len(lines) or lines[i] != FABLE_SHOULD_HEADER:
         return None
-    m = _AGE_WORD_RE.match(lines[-1])
-    if m is None:
+    age_range = word_count = None
+    for line in lines[i + 1:]:
+        ma = _AGE_GROUP_RE.match(line)
+        if ma is not None:
+            age_range = ma["age_range"]
+        mw = _WORD_LINE_RE.match(line)
+        if mw is not None:
+            word_count = int(mw["word_count"])
+    if age_range is None or word_count is None:
         return None
-    return ParsedPrompt(age_range=m["age_range"], word_count=int(m["word_count"]), **values)
+    return ParsedPrompt(age_range=age_range, word_count=int(word_count), **values)
 
 
 def _element_values(obj) -> dict:

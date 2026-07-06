@@ -31,7 +31,7 @@ def tok(tmp_path_factory):
 @pytest.fixture(scope="module")
 def model(tok):
     torch.manual_seed(0)
-    return GPT(GPTConfig(vocab_size=tok.get_vocab_size(), n_layer=2, n_head=2, d_model=64, n_ctx=256)).eval()
+    return GPT(GPTConfig(vocab_size=tok.get_vocab_size(), n_layer=2, n_head=2, d_model=64, n_ctx=512)).eval()
 
 
 def test_encode_prompt_matches_prep_separate_encoding(tok):

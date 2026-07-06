@@ -150,18 +150,21 @@ def test_parse_recovers_fixture_elements():
         outcome="a friend helps just in time",
         moral="courage grows by small steps",
         age_range="4-7",
-        word_count=60,
+        word_count=250,
     )
 
 
 def test_parse_round_trips_renderer():
+    # ds-tf1-en-3m is single-band (B, 4-7 years); render always emits that band,
+    # so a round-trip recovers age_range "4-7". word_count IS slotted, so it
+    # round-trips for any value.
     spec = FableSpec(
         character="a bold hare",
         setting="a windy hill",
         challenge="a river to cross",
         outcome="the bridge holds",
         moral="patience pays",
-        age_range="8-10",
+        age_range="4-7",
         word_count=120,
     )
     parsed = parse_canonical_prompt(render_canonical_prompt(spec))
@@ -189,10 +192,10 @@ def test_parse_returns_none_on_non_canonical():
 
 
 def test_parse_returns_none_when_an_element_is_missing():
-    # A canonical-looking prompt with only four bullets must not parse.
+    # A canonical-looking prompt with only four Element bullets must not parse.
     text = render_canonical_prompt(
         FableSpec(character="a", setting="b", challenge="c", outcome="d", moral="e")
-    ).replace("- Teaching: e\n", "")
+    ).replace("  - Teaching: e\n", "")  # drop the 5th Element bullet
     assert parse_canonical_prompt(text) is None
 
 

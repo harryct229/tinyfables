@@ -43,6 +43,16 @@ Why no SFT and why no pretrained base: ADR-0001.
   (LLM-brainstormed once, human-curated), slot-filled mechanically over 10–20% of training
   examples. Element values are preserved **verbatim** so spec adherence stays mechanically
   measurable.
+- **Template reconciled with real data (issue 04).** ds-tf1-en-3m's actual prompt is a rich fixed
+  template — 2-space-indented Element bullets, a `The fable should:` block of 8 style bullets, and
+  `Keep the story concise but engaging, around 250 words.` The dataset is **single-band**: every
+  row is age group B (4-7 years), ~250 words (verified over 11k rows). Issues 02–03 shipped a
+  *simplified* reconstruction that only matched hand-built fixtures; issue-04 Track B caught it when
+  the fail-loud "all rows failed to parse" guard aborted real prep. `prompts.render_canonical_prompt`
+  now reproduces the real band-B template byte-for-byte and `paraphrases.parse_canonical_prompt`
+  parses it; the toy fixtures were rebuilt from the real format so tests guard reality. `age_range`
+  stays on FableSpec (paraphrase templates slot it; the parser recovers it) but the canonical render
+  always emits the band-B block. Toy `window`/`n_ctx` went 256→512 to fit the longer real prompt.
 - **5 of ~30 templates are held out of training** — robustness to unseen phrasing is measured,
   not asserted.
 - Demo accepts either a structured form or free-text instruction.

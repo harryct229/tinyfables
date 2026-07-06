@@ -15,9 +15,23 @@ import numpy as np
 import torch
 from tokenizers import Tokenizer
 
+from tinyfables.checkpoint import find_latest_checkpoint, load_checkpoint, prune_checkpoints, save_checkpoint
 from tinyfables.config import PretrainConfig
 from tinyfables.model import GPT, GPTConfig
 from tinyfables.stage import write_manifest
+
+
+def _mirror_checkpoint(ckpt_dir, repo_id) -> None:
+    """Best-effort push of the latest checkpoint to the Hub. A network failure
+    must never kill a multi-hour run, so all errors are swallowed with a note."""
+    try:
+        from tinyfables import hub
+
+        latest = find_latest_checkpoint(ckpt_dir)
+        if latest is not None:
+            hub.upload_checkpoint_dir(latest, repo_id, private=True)
+    except Exception as e:  # noqa: BLE001 — resilience over correctness here
+        print(f"[tinyfables] checkpoint hub mirror failed (continuing): {e}")
 
 
 def build_model(cfg: PretrainConfig, vocab_size: int) -> GPT:
@@ -81,10 +95,15 @@ def run(cfg: PretrainConfig, out_dir: Path) -> None:
     autocast_device = "cuda" if device == "cuda" else "cpu"
     scaler = torch.amp.GradScaler(device, enabled=use_amp)
 
+    resume_src = None
     if cfg.resume_from:
-        model = GPT.from_pretrained(cfg.resume_from).to(device)
+        resume_src = Path(cfg.resume_from)
+    elif cfg.ckpt_dir:
+        resume_src = find_latest_checkpoint(cfg.ckpt_dir)
+
+    if resume_src is not None:
+        model, state = load_checkpoint(resume_src, GPT, device)
         optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
-        state = torch.load(Path(cfg.resume_from) / "optimizer.pt", map_location=device)
         optimizer.load_state_dict(state["optimizer"])
         if state.get("scaler") is not None:
             scaler.load_state_dict(state["scaler"])
@@ -110,6 +129,13 @@ def run(cfg: PretrainConfig, out_dir: Path) -> None:
         scaler.step(optimizer)
         scaler.update()
         last_loss = out.loss.item()
+
+        completed = step + 1
+        if cfg.ckpt_dir and cfg.ckpt_every and completed % cfg.ckpt_every == 0 and completed < cfg.steps:
+            save_checkpoint(model, optimizer, scaler, completed, cfg.ckpt_dir)
+            prune_checkpoints(cfg.ckpt_dir, cfg.keep_last_k)
+            if cfg.ckpt_hub_repo:
+                _mirror_checkpoint(cfg.ckpt_dir, cfg.ckpt_hub_repo)
 
     model.save_pretrained(out_dir)
     torch.save(

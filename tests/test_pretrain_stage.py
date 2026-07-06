@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 import torch
 
+from tinyfables.checkpoint import find_latest_checkpoint
 from tinyfables.config import PrepConfig, PretrainConfig, SourceSpec, TokenizerConfig
 from tinyfables.model import GPT
 from tinyfables.stages import pretrain as pretrain_stage
@@ -104,3 +105,41 @@ def test_resume_equality_within_tolerance(toy_shards, tmp_path):
     assert a.keys() == b.keys()
     for k in a:
         assert torch.allclose(a[k], b[k], atol=1e-5), f"param {k} diverged on resume"
+
+
+def test_session_death_resume_via_ckpt_dir(toy_shards, tmp_path):
+    ckpt = tmp_path / "ckpt"
+    # "Session 1" dies after 3 steps; a checkpoint was taken at completed step 2.
+    pretrain_stage.run(toy_cfg(toy_shards, steps=3, ckpt_dir=str(ckpt), ckpt_every=2), tmp_path / "s1")
+    latest = find_latest_checkpoint(ckpt)
+    assert latest is not None and latest.name == "step_2"
+
+    # "Session 2" re-runs the SAME command (target steps=6) -> auto-resumes from step_2.
+    pretrain_stage.run(toy_cfg(toy_shards, steps=6, ckpt_dir=str(ckpt), ckpt_every=2), tmp_path / "s2")
+
+    # A straight-through 6-step run is the ground truth; CPU determinism -> bit-exact.
+    pretrain_stage.run(toy_cfg(toy_shards, steps=6), tmp_path / "full")
+    a = GPT.from_pretrained(tmp_path / "full").state_dict()
+    b = GPT.from_pretrained(tmp_path / "s2").state_dict()
+    assert a.keys() == b.keys()
+    for k in a:
+        assert torch.allclose(a[k], b[k], atol=1e-5), f"param {k} diverged after resume"
+
+
+def test_prune_keeps_last_k_during_training(toy_shards, tmp_path):
+    ckpt = tmp_path / "ckpt"
+    pretrain_stage.run(toy_cfg(toy_shards, steps=6, ckpt_dir=str(ckpt), ckpt_every=2, keep_last_k=1), tmp_path / "o")
+    dirs = sorted(p.name for p in ckpt.iterdir() if p.is_dir())
+    assert dirs == ["step_4"]  # checkpoints at 2 and 4 (6==steps skipped); keep last 1
+
+
+def test_ckpt_hub_mirror_invoked_when_configured(toy_shards, tmp_path, monkeypatch):
+    from tinyfables import hub
+
+    seen = []
+    monkeypatch.setattr(hub, "upload_checkpoint_dir", lambda d, repo, **kw: seen.append((str(d), repo)) or repo)
+    pretrain_stage.run(
+        toy_cfg(toy_shards, steps=4, ckpt_dir=str(tmp_path / "ckpt"), ckpt_every=2, ckpt_hub_repo="user/ckpts"),
+        tmp_path / "o",
+    )
+    assert seen and seen[-1][1] == "user/ckpts"

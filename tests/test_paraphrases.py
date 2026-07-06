@@ -105,6 +105,17 @@ def test_rejects_duplicate_ids(tmp_path):
         load_bank(write_bank(tmp_path, GOOD_TEMPLATE + GOOD_TEMPLATE))
 
 
+def test_rejects_non_bool_held_out(tmp_path):
+    bad = (
+        "  - id: t1\n"
+        "    held_out: \"false\"\n"  # quoted -> YAML string, not a bool
+        "    text: |-\n"
+        "      {character}/{setting}/{challenge}/{outcome}/{moral}.\n"
+    )
+    with pytest.raises(ValueError):
+        load_bank(write_bank(tmp_path, bad))
+
+
 def test_committed_bank_loads(tmp_path):
     bank = load_bank(BANK_PATH)
     assert len(bank.templates) == 30

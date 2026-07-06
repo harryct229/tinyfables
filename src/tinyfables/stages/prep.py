@@ -88,6 +88,12 @@ def run(cfg: PrepConfig, out_dir: Path) -> None:
                 flush()
         flush()
 
+    if cfg.paraphrase_coverage > 0.0 and n_rows > 0 and n_parse_failures == n_rows:
+        raise ValueError(
+            f"paraphrase_coverage={cfg.paraphrase_coverage} but all {n_rows} rows failed to parse "
+            "as a Canonical Prompt — paraphrasing was a no-op. Check the bank/source prompt template."
+        )
+
     n_windows = n_written // cfg.window
     n_keep = n_windows * cfg.window
     n_tokens_dropped = n_written - n_keep

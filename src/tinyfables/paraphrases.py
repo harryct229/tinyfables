@@ -19,7 +19,7 @@ from pathlib import Path
 
 import yaml
 
-from tinyfables.prompts import AGE_WORD_LINE, CANONICAL_HEADER, ELEMENT_FIELDS
+from tinyfables.prompts import CANONICAL_HEADER, ELEMENT_FIELDS
 
 # Prompt-family tags. The list index is the uint8 code written to families.bin.
 CANONICAL = "canonical"
@@ -110,7 +110,9 @@ def load_bank(path: str | Path) -> ParaphraseBank:
         missing = frozenset(_ELEMENT_SLOTS) - slots
         if missing:
             raise ValueError(f"template {tid} missing required element slots {sorted(missing)}")
-        templates.append(Template(id=tid, held_out=bool(entry["held_out"]), text=text))
+        if not isinstance(entry["held_out"], bool):
+            raise ValueError(f"template {tid} field 'held_out' must be a bool, got {entry['held_out']!r}")
+        templates.append(Template(id=tid, held_out=entry["held_out"], text=text))
     if not any(not t.held_out for t in templates):
         raise ValueError("bank has no seen (training) templates")
     return ParaphraseBank(version=int(data["version"]), templates=tuple(templates))
@@ -181,7 +183,7 @@ def select_row(
 
 
 def load_families(path: str | Path):
-    """Read families.bin as a uint8 array; FAMILIES[code] gives the tag name."""
+    """Read families.bin as a uint8 array (a read-only view over the file bytes); FAMILIES[code] gives the tag name."""
     import numpy as np
 
     return np.frombuffer(Path(path).read_bytes(), dtype=np.uint8)

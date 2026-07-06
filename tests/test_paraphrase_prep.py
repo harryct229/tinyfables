@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+import pytest
 from tokenizers import Tokenizer
 
 from tinyfables.config import PrepConfig, SourceSpec, TokenizerConfig
@@ -27,7 +28,7 @@ def _run(tmp_path, coverage, name, bank=BANK):
         tokenizer_dir=str(_tok_dir(tmp_path)),
         window=256,
         seed=0,
-        paraphrase_bank=bank if coverage > 0 else bank,
+        paraphrase_bank=bank,
         paraphrase_coverage=coverage,
     )
     prep_stage.run(cfg, out)
@@ -109,3 +110,40 @@ def test_parse_failures_counted_and_left_canonical(tmp_path):
     assert s["n_parse_failures"] == 1  # the non-canonical row fell back to canonical
     fam = load_families(out / "families.bin")
     assert (fam == FAMILIES.index("canonical")).sum() >= 1
+
+
+def test_all_parse_failures_raises(tmp_path):
+    corpus = tmp_path / "allbad.jsonl"
+    corpus.write_text(
+        json.dumps({"prompt": "Write a fable about a fox.", "fable": "A fox learned.\n\n**The Moral:** x"}) + "\n"
+        + json.dumps({"prompt": "Another non-canonical prompt.", "fable": "B story.\n\n**The Moral:** y"}) + "\n"
+    )
+    src = SourceSpec(jsonl_path=str(corpus))
+    tok = tmp_path / "tokbad"
+    tokenizer_stage.run(TokenizerConfig(source=src, vocab_size=512, seed=0), tok)
+    with pytest.raises(ValueError):
+        prep_stage.run(
+            PrepConfig(source=src, tokenizer_dir=str(tok), window=256, seed=0,
+                       paraphrase_bank=BANK, paraphrase_coverage=1.0),
+            tmp_path / "allbadprep",
+        )
+
+
+def test_mask_covers_paraphrased_prompt_span(tmp_path):
+    from tinyfables.data import read_rows
+    from tinyfables.paraphrases import load_bank, select_row
+
+    tok_dir = _tok_dir(tmp_path)
+    out = tmp_path / "cov1mask"
+    prep_stage.run(
+        PrepConfig(source=SRC, tokenizer_dir=str(tok_dir), window=256, seed=0,
+                   paraphrase_bank=BANK, paraphrase_coverage=1.0),
+        out,
+    )
+    tok = Tokenizer.from_file(str(tok_dir / "tokenizer.json"))
+    first = read_rows(SRC, seed=0)[0]  # same seed => same post-shuffle order as the stage
+    row = select_row(first["prompt"], 0, 1.0, 0, load_bank(BANK))  # row 0 is paraphrased at coverage 1.0
+    n_p = len(tok.encode(row.prompt).ids)
+    mask = np.frombuffer((out / "mask.bin").read_bytes(), dtype=np.uint8)
+    assert not mask[:n_p].any()  # the paraphrased prompt span carries no loss
+    assert mask[n_p]             # the first fable token carries loss

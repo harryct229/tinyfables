@@ -201,6 +201,27 @@ Colab budget. **Week-1 gate: measured T4 tokens/sec benchmark before committing*
   20k-step run ≈ 1.8–2 h). Chosen `ckpt_every` = **500** (interval ≈ 161 s → a session
   death costs ≤ ~2.7 min of training); `keep_last_k` = 2. No size/data-budget change —
   geometry stayed 6/384/6, ctx 1024, batch 16, 20k steps.
+- **Base Model result (Track B complete, 2026-07-06).** Prep: 450k rows → **219.9M
+  tokens**, paraphrase coverage 0.15 (67,629 seen-template rows), **0 parse failures,
+  0 held-out leakage**. Pretrain: 20,000 steps at ~49k tok/s (~1.8 h), fp16 AMP, final
+  **fable-token loss 1.4466** (from 7.03); measured params **14,186,496**. Artifacts on
+  the Hub: **[`congthanh991/tinyfables-13m-base`]** (model + `loss_curve.png` + logs) and
+  **[`congthanh991/tinyfables-tokenizer`]**. Compression figure (ADR-0002): ours-8k 337.8
+  vs GPT-2 349.79 tok/fable. **Spot check (20 varied FableSpecs, single-band 4-7):**
+  fluent ~250-word fables with proper fable structure; character honored 16/18 (one drift,
+  lamb→wolf), settings broadly present, morals delivered in prose. **Note for issue 05:**
+  the model rarely emits the `**bold**` moral marker (2/20), so moral extraction must lean
+  on the fuzzy fallback, not the markdown marker. **Checkpoint-resume (AC-2):** implemented,
+  unit-tested (bit-exact auto-resume), and checkpoints were written to Drive every 500
+  steps throughout — but this run completed in a single stable session, so a *real* death
+  was not triggered; the survival capability is proven by tests + the on-Drive checkpoints,
+  not by an actual mid-run death this session.
+- **Dataset is single-band** (issue 04): ds-tf1-en-3m is entirely age group B (4-7 years),
+  ~250 words (verified 11k rows; 0/450k parse failures at prep confirms it). The canonical
+  prompt template was reconciled with the real dataset here (issues 02–03 shipped a
+  simplified reconstruction masked by hand-built fixtures; the fail-loud parse guard caught
+  it). `render_canonical_prompt` reproduces the real band-B template byte-for-byte and
+  raises on any non-4-7 age; `parse_canonical_prompt` requires the exact structure.
 
 ## Build vs buy
 

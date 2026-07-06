@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from tinyfables.prompts import FableSpec, render_canonical_prompt
 
 FIXTURE = Path(__file__).parent / "fixtures" / "tiny_corpus.jsonl"
@@ -32,14 +34,23 @@ def test_partial_spec_omits_missing_elements():
     assert text.endswith("around 250 words.")
 
 
-def test_word_line_and_age_bullet_match_parser_regexes():
-    # Guard against drift between the renderer's output and the parser's regexes
-    # (which are derived from prompts.WORD_LINE). If either the word line or the
-    # age-group bullet changes shape, this fails before parse silently returns None.
-    from tinyfables.paraphrases import _AGE_GROUP_RE, _WORD_LINE_RE
-    from tinyfables.prompts import WORD_LINE, FableSpec, render_canonical_prompt
+def test_render_output_matches_what_the_parser_requires():
+    # Guard against drift between the renderer and the parser: the parser requires
+    # the word line (regex derived from prompts.WORD_LINE) and the STYLE_BULLETS
+    # block verbatim. If render stops emitting either, parse would silently start
+    # returning None; this fails first.
+    from tinyfables.paraphrases import _WORD_LINE_RE
+    from tinyfables.prompts import STYLE_BULLETS, WORD_LINE, FableSpec, render_canonical_prompt
 
     lines = render_canonical_prompt(FableSpec(character="a mouse", word_count=250)).split("\n")
     assert _WORD_LINE_RE.match(WORD_LINE.format(word_count=250))
     assert any(_WORD_LINE_RE.match(line) for line in lines)
-    assert any(_AGE_GROUP_RE.match(line) for line in lines)
+    for bullet in STYLE_BULLETS:
+        assert bullet in lines
+
+
+def test_render_rejects_non_single_band_age_range():
+    # ds-tf1-en-3m is single-band; a non-"4-7" age_range must fail loudly rather
+    # than render a prompt whose age bullet silently disagrees with the request.
+    with pytest.raises(ValueError, match="single-band"):
+        render_canonical_prompt(FableSpec(character="a mouse", age_range="8-10"))

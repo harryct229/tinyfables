@@ -19,7 +19,14 @@ from pathlib import Path
 
 import yaml
 
-from tinyfables.prompts import CANONICAL_HEADER, ELEMENT_FIELDS, FABLE_SHOULD_HEADER, WORD_LINE
+from tinyfables.prompts import (
+    CANONICAL_AGE_RANGE,
+    CANONICAL_HEADER,
+    ELEMENT_FIELDS,
+    FABLE_SHOULD_HEADER,
+    STYLE_BULLETS,
+    WORD_LINE,
+)
 
 # Prompt-family tags. The list index is the uint8 code written to families.bin.
 CANONICAL = "canonical"
@@ -33,12 +40,10 @@ _ELEMENT_SLOTS = tuple(field for field, _label in ELEMENT_FIELDS)
 _OPTIONAL_SLOTS = ("age_range", "word_count")
 _ALLOWED_SLOTS = frozenset(_ELEMENT_SLOTS) | frozenset(_OPTIONAL_SLOTS)
 
-# The age band lives in the first "The fable should:" style bullet.
-_AGE_GROUP_RE = re.compile(
-    r"^  - Be appropriate for age group [A-E] \((?P<age_range>.+?) years\)$"
-)
 # Derived from prompts.WORD_LINE so it cannot drift from the renderer; a guard
-# test (test_word_line_regex_matches_renderer_output) pins the two together.
+# test pins the two together. The age band is not regex-matched — the style block
+# is required verbatim (see parse_canonical_prompt), so the band is exactly the
+# single one the dataset uses and age_range is prompts.CANONICAL_AGE_RANGE.
 _WORD_LINE_RE = re.compile(
     "^" + re.escape(WORD_LINE).replace(r"\{word_count\}", r"(?P<word_count>\d+)") + "$"
 )
@@ -124,34 +129,39 @@ def load_bank(path: str | Path) -> ParaphraseBank:
 
 def parse_canonical_prompt(text: str) -> ParsedPrompt | None:
     """Recover Element values from a rendered Canonical Prompt, or None if `text`
-    is not the canonical structure (header, five two-space Element bullets in
-    order, the "The fable should:" block containing an age-group bullet, and the
-    word line). Element values are verbatim — everything after the
-    "  - {Label}: " prefix, so a colon inside a value survives."""
+    is not EXACTLY the canonical structure. ds-tf1-en-3m is single-band, so the
+    template is fixed except for the five Element values and the word count: we
+    require the header, five two-space Element bullets in order, the verbatim
+    "The fable should:" style block, then the word line — nothing more, nothing
+    less. A row that deviates (extra trailing lines, a mangled/duplicated block,
+    a different band) returns None, so it is counted as a parse failure and left
+    canonical rather than silently mis-parsed. Element values are verbatim
+    (everything after the "  - {Label}: " prefix, so a colon in a value survives)."""
     lines = text.split("\n")
-    if not lines or lines[0] != CANONICAL_HEADER:
+    if len(lines) != 1 + len(ELEMENT_FIELDS) + 1 + len(STYLE_BULLETS) + 1:
+        return None
+    if lines[0] != CANONICAL_HEADER:
         return None
     values: dict[str, object] = {}
     i = 1
     for field, label in ELEMENT_FIELDS:
         prefix = f"  - {label}: "
-        if i >= len(lines) or not lines[i].startswith(prefix):
+        if not lines[i].startswith(prefix):
             return None
         values[field] = lines[i][len(prefix):]
         i += 1
-    if i >= len(lines) or lines[i] != FABLE_SHOULD_HEADER:
+    if lines[i] != FABLE_SHOULD_HEADER:
         return None
-    age_range = word_count = None
-    for line in lines[i + 1:]:
-        ma = _AGE_GROUP_RE.match(line)
-        if ma is not None:
-            age_range = ma["age_range"]
-        mw = _WORD_LINE_RE.match(line)
-        if mw is not None:
-            word_count = int(mw["word_count"])
-    if age_range is None or word_count is None:
+    i += 1
+    if tuple(lines[i:i + len(STYLE_BULLETS)]) != STYLE_BULLETS:
         return None
-    return ParsedPrompt(age_range=age_range, word_count=int(word_count), **values)
+    i += len(STYLE_BULLETS)
+    word = _WORD_LINE_RE.match(lines[i])
+    if word is None:
+        return None
+    # The style block is verified verbatim above, so the band — hence age_range —
+    # is exactly the single band the dataset uses.
+    return ParsedPrompt(age_range=CANONICAL_AGE_RANGE, word_count=int(word["word_count"]), **values)
 
 
 def _element_values(obj) -> dict:

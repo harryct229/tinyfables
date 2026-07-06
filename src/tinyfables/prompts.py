@@ -68,6 +68,15 @@ class FableSpec:
 
 
 def render_canonical_prompt(spec: FableSpec) -> str:
+    # ds-tf1-en-3m is single-band, so the Base Model only ever saw band B. Honor
+    # that instead of silently mislabelling: a non-canonical age_range is a loud
+    # error, not a prompt whose age bullet quietly disagrees with the request.
+    if spec.age_range != CANONICAL_AGE_RANGE:
+        raise ValueError(
+            f"ds-tf1-en-3m is single-band (age group B, {CANONICAL_AGE_RANGE}); the Base "
+            f"Model was trained only on that band, so render_canonical_prompt does not "
+            f"support age_range={spec.age_range!r} (use {CANONICAL_AGE_RANGE!r})."
+        )
     lines = [_HEADER]
     for field, label in _ELEMENTS:
         value = getattr(spec, field)

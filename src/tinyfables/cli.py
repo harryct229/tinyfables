@@ -30,7 +30,7 @@ def _add_generate_parser(sub) -> None:
     gen_p.add_argument("--challenge")
     gen_p.add_argument("--outcome")
     gen_p.add_argument("--moral")
-    gen_p.add_argument("--age-range", default="4-7")
+    gen_p.add_argument("--age-range", default="4-7", help="dataset is single-band; only '4-7' is supported")
     gen_p.add_argument("--word-count", type=int, default=250)
     gen_p.add_argument("--max-new-tokens", type=int, default=256)
     gen_p.add_argument("--min-new-tokens", type=int, default=0)

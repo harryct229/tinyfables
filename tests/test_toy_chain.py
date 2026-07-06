@@ -15,11 +15,11 @@ def test_toy_chain_tokenizer_prep_pretrain_generate(tmp_path, capsys):
         f"source:\n  jsonl_path: {FIXTURE}\nvocab_size: 512\nseed: 0\ncompare_gpt2: false\n"
     )
     (tmp_path / "prep.yaml").write_text(
-        f"source:\n  jsonl_path: {FIXTURE}\ntokenizer_dir: {tok_dir}\nwindow: 256\nseed: 0\n"
+        f"source:\n  jsonl_path: {FIXTURE}\ntokenizer_dir: {tok_dir}\nwindow: 512\nseed: 0\n"
     )
     (tmp_path / "pre.yaml").write_text(
         f"prep_dir: {prep_dir}\ntokenizer_dir: {tok_dir}\n"
-        "n_layer: 2\nn_head: 2\nd_model: 64\nn_ctx: 256\n"
+        "n_layer: 2\nn_head: 2\nd_model: 64\nn_ctx: 512\n"
         "batch_size: 4\nsteps: 100\nwarmup_steps: 10\nlr: 0.001\nseed: 0\ndevice: cpu\n"
     )
 

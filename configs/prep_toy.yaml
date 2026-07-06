@@ -1,7 +1,7 @@
 source:
   jsonl_path: tests/fixtures/tiny_corpus.jsonl
 tokenizer_dir: runs/tokenizer_toy
-window: 256
+window: 512   # fits the real canonical prompt (~250 toy tokens) + fable in one window
 seed: 0
 paraphrase_bank: configs/paraphrases.yaml
 paraphrase_coverage: 0.15

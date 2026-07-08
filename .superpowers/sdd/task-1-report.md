@@ -33,3 +33,34 @@ Full suite:
 - `AXES` is `("moral", "adherence", "coherence", "prose")`.
 - `WEIGHTS` is `{"moral": 0.4, "adherence": 0.3, "coherence": 0.2, "prose": 0.1}`.
 - `derive_preference` returns `0`, `1`, or `None` for exact ties.
+
+## Review Fix
+- Added a regression test for the mathematical-tie example:
+  `{"moral": 1, "adherence": 1, "coherence": 1, "prose": 3}` vs
+  `{"moral": 1, "adherence": 1, "coherence": 2, "prose": 1}` now returns `None`.
+- Updated `derive_preference` to use `math.isclose(..., abs_tol=1e-12)` so float-rounding ties are skipped reliably.
+
+## Verification
+Required command attempted from the worktree:
+
+```text
+/Users/thanh/code/tinystories/.venv/bin/pytest tests/test_feedback.py -q
+```
+
+Result:
+
+```text
+ImportError: No module named 'tinyfables.feedback'
+```
+
+Worktree-local rerun:
+
+```text
+PYTHONPATH=src /Users/thanh/code/tinystories/.venv/bin/pytest tests/test_feedback.py -q
+```
+
+Result:
+
+```text
+6 passed in 0.00s
+```

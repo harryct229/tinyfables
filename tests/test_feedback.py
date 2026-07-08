@@ -27,6 +27,12 @@ def test_derive_preference_skips_ties():
     assert derive_preference(r, dict(r)) is None
 
 
+def test_derive_preference_skips_mathematical_ties():
+    a = {"moral": 1, "adherence": 1, "coherence": 1, "prose": 3}
+    b = {"moral": 1, "adherence": 1, "coherence": 2, "prose": 1}
+    assert derive_preference(a, b) is None
+
+
 def test_moral_weight_dominates_a_single_axis_swing():
     # moral 5 vs 1 (Δagg 0.4*4=1.6) beats prose 1 vs 5 (Δagg 0.1*4=0.4)
     a = {"moral": 5, "adherence": 3, "coherence": 3, "prose": 1}

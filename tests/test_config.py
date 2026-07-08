@@ -214,3 +214,11 @@ def test_label_config_defaults():
     assert cfg.batch_size == 5
     assert cfg.swap_fraction == 0.10
     assert cfg.calibration_size == 30
+
+
+def test_derive_config_defaults():
+    from tinyfables.config import DeriveConfig
+
+    cfg = DeriveConfig(labels="runs/labels/labels.jsonl", pairs="runs/pairs/pairs.jsonl")
+    assert cfg.weight_delta == 0.1
+    assert cfg.held_out_fraction == 0.10

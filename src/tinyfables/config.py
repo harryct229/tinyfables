@@ -146,6 +146,15 @@ class LabelConfig:
             raise ValueError("batch_size must be positive")
 
 
+@dataclass(frozen=True)
+class DeriveConfig:
+    labels: str
+    pairs: str
+    weight_delta: float = 0.1
+    held_out_fraction: float = 0.10
+    seed: int = 0
+
+
 def _build(cls: type[T], data: Any) -> T:
     if not isinstance(data, dict):
         raise TypeError(f"expected a mapping for {cls.__name__}, got {type(data).__name__}")

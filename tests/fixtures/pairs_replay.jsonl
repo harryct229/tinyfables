@@ -1,0 +1,6 @@
+{"pair_id": "pair-000000", "spec": {"character": "a shy octopus"}, "prompt": "p0", "fables": ["fable zero A", "fable zero B"], "seeds": [0, 1]}
+{"pair_id": "pair-000001", "spec": {"character": "a bold sparrow"}, "prompt": "p1", "fables": ["fable one A", "fable one B"], "seeds": [2, 3]}
+{"pair_id": "pair-000002", "spec": {"character": "a tie pair"}, "prompt": "p2", "fables": ["fable two A", "fable two B"], "seeds": [4, 5]}
+{"pair_id": "pair-000003", "spec": {"character": "a clever mole"}, "prompt": "p3", "fables": ["fable three A", "fable three B"], "seeds": [6, 7]}
+{"pair_id": "pair-000004", "spec": {"character": "a kind bear"}, "prompt": "p4", "fables": ["fable four A", "fable four B"], "seeds": [8, 9]}
+{"pair_id": "pair-000005", "spec": {"character": "a quick hare"}, "prompt": "p5", "fables": ["fable five A", "fable five B"], "seeds": [10, 11]}

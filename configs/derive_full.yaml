@@ -1,0 +1,6 @@
+# Real derivation (issue 06, Track B): over the real labeling cache + pairs.
+labels: runs/labels_base/labels.jsonl
+pairs: runs/pairgen_base/pairs.jsonl
+weight_delta: 0.1
+held_out_fraction: 0.10
+seed: 0

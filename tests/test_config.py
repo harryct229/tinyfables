@@ -161,3 +161,29 @@ def test_benchmark_config_rejects_unknown_key(tmp_path):
     p.write_text("tokenizer_dir: runs/tok\nbogus: 1\n")
     with pytest.raises(KeyError):
         load_config(p, BenchmarkConfig)
+
+
+def test_eval_config_parses_source_and_defaults(tmp_path):
+    from tinyfables.config import EvalConfig, load_config
+
+    p = tmp_path / "e.yaml"
+    p.write_text(
+        "checkpoint: runs/base\ntokenizer_dir: runs/tok\n"
+        "source:\n  jsonl_path: tests/fixtures/tiny_corpus.jsonl\n"
+        "paraphrase_bank: configs/paraphrases.yaml\nn_generations: 5\n"
+    )
+    cfg = load_config(p, EvalConfig)
+    assert cfg.checkpoint == "runs/base" and cfg.source.jsonl_path.endswith("tiny_corpus.jsonl")
+    assert cfg.paraphrase_bank == "configs/paraphrases.yaml" and cfg.n_generations == 5
+    assert cfg.n_ctx == 1024 and cfg.moral_threshold == 0.3 and cfg.top_k == 50
+
+
+def test_eval_config_rejects_unknown_key(tmp_path):
+    import pytest
+
+    from tinyfables.config import EvalConfig, load_config
+
+    p = tmp_path / "e.yaml"
+    p.write_text("checkpoint: c\ntokenizer_dir: t\nsource:\n  jsonl_path: x.jsonl\nbogus: 1\n")
+    with pytest.raises(KeyError):
+        load_config(p, EvalConfig)

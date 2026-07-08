@@ -1,0 +1,16 @@
+{
+  "labels": [
+    {
+      "pair_id": "pair-000000",
+      "fable_a": {"moral": 5, "adherence": 4, "coherence": 4, "prose": 4},
+      "fable_b": {"moral": 3, "adherence": 4, "coherence": 3, "prose": 4},
+      "justification": "A states and dramatizes the requested moral; B only implies it."
+    },
+    {
+      "pair_id": "pair-000001",
+      "fable_a": {"moral": 2, "adherence": 3, "coherence": 3, "prose": 3},
+      "fable_b": {"moral": 4, "adherence": 4, "coherence": 4, "prose": 4},
+      "justification": "B follows the spec and ends on a clear lesson; A drifts from the outcome."
+    }
+  ]
+}

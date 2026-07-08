@@ -1,8 +1,19 @@
+import json
 from pathlib import Path
 
+import pytest
 import yaml
 
+from tinyfables.labeler import (
+    LabelerError,
+    PairLabel,
+    build_batch_prompt,
+    load_prompt,
+    parse_labeler_response,
+)
+
 REPO = Path(__file__).resolve().parents[1]
+FIX = REPO / "tests" / "fixtures" / "labeler_response_sample.json"
 
 
 def test_rubric_exists_and_anchors_all_four_axes():
@@ -28,3 +39,91 @@ def test_labeler_prompt_is_versioned_and_slotted():
     # literal JSON braces are escaped for str.format (no stray single braces
     # besides the two named slots) -> format with dummy values must not raise
     tmpl.format(rubric="R", pairs="P")
+
+
+def test_load_prompt_returns_version_and_template():
+    version, template = load_prompt(REPO / "configs" / "labeler_prompt.yaml")
+    assert version == 1
+    assert "{rubric}" not in build_batch_prompt(
+        "RUBRIC",
+        template,
+        [{"pair_id": "pair-0", "fable_a": "A", "fable_b": "B"}],
+    )
+
+
+def test_build_batch_prompt_embeds_rubric_and_every_pair():
+    _, template = load_prompt(REPO / "configs" / "labeler_prompt.yaml")
+    batch = [
+        {"pair_id": "pair-000001", "fable_a": "the fox ran", "fable_b": "the owl slept"},
+        {"pair_id": "pair-000002", "fable_a": "a {brace} value", "fable_b": "b"},
+    ]
+    prompt = build_batch_prompt("MY RUBRIC BODY", template, batch)
+    assert "MY RUBRIC BODY" in prompt
+    for row in batch:
+        assert row["pair_id"] in prompt
+        assert row["fable_a"] in prompt and row["fable_b"] in prompt
+    assert "a {brace} value" in prompt
+
+
+def test_parse_valid_response_returns_labels_in_expected_order():
+    text = FIX.read_text()
+    ids = [row["pair_id"] for row in json.loads(text)["labels"]]
+    labels = parse_labeler_response(text, ids)
+    assert [l.pair_id for l in labels] == ids
+    for label in labels:
+        assert isinstance(label, PairLabel)
+        for side in (label.ratings_a, label.ratings_b):
+            assert set(side) == {"moral", "adherence", "coherence", "prose"}
+            assert all(isinstance(v, int) and 1 <= v <= 5 for v in side.values())
+
+
+def test_parse_extracts_json_from_surrounding_prose():
+    body = (
+        '{"labels":[{"pair_id":"p0",'
+        '"fable_a":{"moral":4,"adherence":3,"coherence":4,"prose":3},'
+        '"fable_b":{"moral":2,"adherence":2,"coherence":3,"prose":3}}]}'
+    )
+    labels = parse_labeler_response("Sure! Here it is:\n" + body + "\nDone.", ["p0"])
+    assert labels[0].ratings_a["moral"] == 4
+
+
+def test_parse_rejects_missing_pair():
+    body = (
+        '{"labels":[{"pair_id":"p0",'
+        '"fable_a":{"moral":4,"adherence":3,"coherence":4,"prose":3},'
+        '"fable_b":{"moral":2,"adherence":2,"coherence":3,"prose":3}}]}'
+    )
+    with pytest.raises(LabelerError):
+        parse_labeler_response(body, ["p0", "p1"])
+
+
+def test_parse_rejects_out_of_range_and_non_int():
+    for bad in ("6", "0", "3.5", '"4"'):
+        body = (
+            '{"labels":[{"pair_id":"p0",'
+            f'"fable_a":{{"moral":{bad},"adherence":3,"coherence":4,"prose":3}},'
+            '"fable_b":{"moral":2,"adherence":2,"coherence":3,"prose":3}}]}'
+        )
+        with pytest.raises(LabelerError):
+            parse_labeler_response(body, ["p0"])
+
+
+def test_parse_rejects_missing_axis():
+    body = (
+        '{"labels":[{"pair_id":"p0",'
+        '"fable_a":{"moral":4,"adherence":3,"coherence":4},'
+        '"fable_b":{"moral":2,"adherence":2,"coherence":3,"prose":3}}]}'
+    )
+    with pytest.raises(LabelerError):
+        parse_labeler_response(body, ["p0"])
+
+
+def test_recorded_sample_is_the_schema_contract():
+    # ONE schema contract test against a recorded live sample (ADR-0004). Track B
+    # replaces this fixture with a verbatim real `claude -p` capture; this test must
+    # stay green, which is exactly what pins our schema to Claude's real output.
+    text = FIX.read_text()
+    payload = json.loads(text)
+    assert "labels" in payload and payload["labels"]
+    ids = [row["pair_id"] for row in payload["labels"]]
+    parse_labeler_response(text, ids)

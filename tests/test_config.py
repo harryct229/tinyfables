@@ -194,6 +194,16 @@ def test_audit_config_defaults():
 
     cfg = AuditConfig(labels="runs/labels/labels.jsonl")
     assert cfg.self_consistency_gate == 0.85
+    assert cfg.position_swap_review_threshold == 0.5
+
+
+def test_audit_config_rejects_invalid_thresholds():
+    from tinyfables.config import AuditConfig
+
+    with pytest.raises(ValueError):
+        AuditConfig(labels="runs/labels/labels.jsonl", self_consistency_gate=1.1)
+    with pytest.raises(ValueError):
+        AuditConfig(labels="runs/labels/labels.jsonl", position_swap_review_threshold=-0.1)
 
 
 def test_pairgen_config_defaults_match_the_feedback_spec():

@@ -18,12 +18,20 @@ from tinyfables.stage import write_manifest
 
 def run(cfg: AuditConfig, out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
-    instances = list(load_cache(cfg.labels).values())
+    labels_path = Path(cfg.labels)
+    if not labels_path.exists():
+        raise FileNotFoundError(f"labels cache not found: {labels_path}")
+
+    cache = load_cache(labels_path)
+    if not cache:
+        raise ValueError(f"labels cache is empty: {labels_path}")
+
+    instances = list(cache.values())
 
     swap = position_flip_rate(instances)
     consistency = self_consistency(instances)
     passed = consistency["mean_agreement"] >= cfg.self_consistency_gate
-    review_flag = swap["n_flipped"] > 0
+    review_flag = swap["n_pairs"] > 0 and swap["flip_rate"] >= cfg.position_swap_review_threshold
 
     audit = {
         "position_swap": swap,
@@ -32,6 +40,7 @@ def run(cfg: AuditConfig, out_dir: Path) -> None:
             "self_consistency_gate": cfg.self_consistency_gate,
             "self_consistency_pass": passed,
             "position_swap_review_flag": review_flag,
+            "position_swap_review_threshold": cfg.position_swap_review_threshold,
         },
     }
 
@@ -39,7 +48,11 @@ def run(cfg: AuditConfig, out_dir: Path) -> None:
     audit_path.write_text(json.dumps(audit, indent=2, sort_keys=True) + "\n")
 
     verdict = "PASS" if passed else "BELOW GATE - flag for issue 07"
-    swap_verdict = "REVIEW" if review_flag else "no flips observed"
+    swap_verdict = (
+        f"REVIEW (threshold {cfg.position_swap_review_threshold:.2f})"
+        if review_flag
+        else f"no high-flip flag (threshold {cfg.position_swap_review_threshold:.2f})"
+    )
     report_lines = [
         "# Labeler audit report",
         "",

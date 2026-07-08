@@ -29,3 +29,16 @@ rtk env PYTHONPATH=src /Users/thanh/code/tinystories/.venv/bin/pytest tests/test
 ```
 
 Result: `25 passed in 0.06s`
+
+Review-fix append:
+- `audit.run()` now fails fast if `labels` is missing on disk or if `load_cache()` returns an empty cache.
+- `gate.position_swap_review_flag` now uses `position_swap_review_threshold` and only evaluates when `n_pairs > 0`.
+- `AuditConfig` now validates both `self_consistency_gate` and `position_swap_review_threshold` in `[0, 1]`.
+
+Verification rerun:
+
+```bash
+rtk env PYTHONPATH=src /Users/thanh/code/tinystories/.venv/bin/pytest tests/test_audit_stage.py tests/test_config.py -q
+```
+
+Result: `27 passed in 0.06s`

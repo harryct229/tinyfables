@@ -165,6 +165,13 @@ class DeriveConfig:
 class AuditConfig:
     labels: str
     self_consistency_gate: float = 0.85
+    position_swap_review_threshold: float = 0.5
+
+    def __post_init__(self) -> None:
+        if not 0.0 <= self.self_consistency_gate <= 1.0:
+            raise ValueError("self_consistency_gate must be in [0, 1]")
+        if not 0.0 <= self.position_swap_review_threshold <= 1.0:
+            raise ValueError("position_swap_review_threshold must be in [0, 1]")
 
 
 def _build(cls: type[T], data: Any) -> T:

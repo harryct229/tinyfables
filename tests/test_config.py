@@ -200,3 +200,17 @@ def test_pairgen_config_defaults_match_the_feedback_spec():
     assert cfg.n_pairs == 2000
     assert cfg.temperature == 0.9
     assert cfg.max_new_tokens == 320
+
+
+def test_label_config_defaults():
+    from tinyfables.config import LabelConfig
+
+    cfg = LabelConfig(
+        pairs="runs/pairs/pairs.jsonl",
+        rubric="RUBRIC.md",
+        labeler_prompt="configs/labeler_prompt.yaml",
+        model="claude-opus-4-8",
+    )
+    assert cfg.batch_size == 5
+    assert cfg.swap_fraction == 0.10
+    assert cfg.calibration_size == 30

@@ -1,0 +1,10 @@
+# Toy labeling over a tiny pairs file. Tests inject a fake runner; this config exists
+# for CLI-shape validation and the toy chain. `model` is a placeholder here.
+pairs: runs/pairgen_toy/pairs.jsonl
+rubric: RUBRIC.md
+labeler_prompt: configs/labeler_prompt.yaml
+model: claude-opus-4-8
+batch_size: 2
+swap_fraction: 0.5
+calibration_size: 2
+seed: 0

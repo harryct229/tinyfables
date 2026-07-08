@@ -1,0 +1,11 @@
+# Real labeling run (issue 06, Track B) on THIS Mac via the Claude subscription.
+# Resumable: re-run the same command after any interruption. `model` is pinned and
+# logged as model_version on every label.
+pairs: runs/pairgen_base/pairs.jsonl
+rubric: RUBRIC.md
+labeler_prompt: configs/labeler_prompt.yaml
+model: claude-opus-4-8
+batch_size: 5
+swap_fraction: 0.10
+calibration_size: 30
+seed: 0

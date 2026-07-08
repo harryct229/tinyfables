@@ -5,6 +5,7 @@ pay their import cost when actually invoked."""
 from tinyfables.config import (
     BenchmarkConfig,
     EvalConfig,
+    LabelConfig,
     PairgenConfig,
     PrepConfig,
     PretrainConfig,
@@ -18,4 +19,5 @@ REGISTRY: dict[str, tuple[type, str]] = {
     "pretrain": (PretrainConfig, "tinyfables.stages.pretrain"),
     "evaluate": (EvalConfig, "tinyfables.stages.evaluate"),
     "pairgen": (PairgenConfig, "tinyfables.stages.pairgen"),
+    "label": (LabelConfig, "tinyfables.stages.label"),
 }

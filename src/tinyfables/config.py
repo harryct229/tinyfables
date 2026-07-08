@@ -127,6 +127,25 @@ class PairgenConfig:
     device: str = "auto"
 
 
+@dataclass(frozen=True)
+class LabelConfig:
+    pairs: str
+    rubric: str
+    labeler_prompt: str
+    model: str
+    batch_size: int = 5
+    swap_fraction: float = 0.10
+    calibration_size: int = 30
+    seed: int = 0
+    max_batches: int | None = None
+
+    def __post_init__(self) -> None:
+        if not 0.0 <= self.swap_fraction <= 1.0:
+            raise ValueError("swap_fraction must be in [0, 1]")
+        if self.batch_size <= 0:
+            raise ValueError("batch_size must be positive")
+
+
 def _build(cls: type[T], data: Any) -> T:
     if not isinstance(data, dict):
         raise TypeError(f"expected a mapping for {cls.__name__}, got {type(data).__name__}")

@@ -94,6 +94,24 @@ class BenchmarkConfig:
     seed: int = 0
 
 
+@dataclass(frozen=True)
+class EvalConfig:
+    checkpoint: str
+    tokenizer_dir: str
+    source: SourceSpec
+    paraphrase_bank: str | None = None
+    n_ctx: int = 1024
+    n_perplexity_rows: int = 500
+    n_generations: int = 50
+    max_new_tokens: int = 320
+    min_new_tokens: int = 80
+    temperature: float = 0.9
+    top_k: int = 50
+    moral_threshold: float = 0.3
+    seed: int = 0
+    device: str = "auto"
+
+
 def _build(cls: type[T], data: Any) -> T:
     if not isinstance(data, dict):
         raise TypeError(f"expected a mapping for {cls.__name__}, got {type(data).__name__}")

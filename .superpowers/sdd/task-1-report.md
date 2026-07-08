@@ -64,3 +64,22 @@ Result:
 ```text
 6 passed in 0.00s
 ```
+
+## Review Fix Follow-Up
+- Replaced the tolerance-based tie check in `derive_preference` with exact `Decimal(str(...))` score comparison built from the existing `WEIGHTS` values.
+- Kept exact mathematical ties skipped, while allowing close-but-distinct scores to produce a winner.
+- Updated tests to cover both the mathematical tie case and a near-equal non-tie.
+
+## Verification Rerun
+Command:
+
+```text
+PYTHONPATH=src /Users/thanh/code/tinystories/.venv/bin/pytest tests/test_feedback.py -q
+```
+
+Result:
+
+```text
+......                                                                   [100%]
+6 passed in 0.00s
+```

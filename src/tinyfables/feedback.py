@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from math import isclose
+from decimal import Decimal
 
 AXES: tuple[str, ...] = ("moral", "adherence", "coherence", "prose")
 WEIGHTS: dict[str, float] = {
@@ -26,8 +26,12 @@ def derive_preference(
 ) -> int | None:
     """Return 0 or 1 for the preferred fable, or None for an exact tie."""
 
-    score_0 = aggregate_score(ratings_0, weights)
-    score_1 = aggregate_score(ratings_1, weights)
-    if isclose(score_0, score_1, rel_tol=0.0, abs_tol=1e-12):
+    score_0 = sum(
+        Decimal(str(weights[axis])) * Decimal(str(ratings_0[axis])) for axis in AXES
+    )
+    score_1 = sum(
+        Decimal(str(weights[axis])) * Decimal(str(ratings_1[axis])) for axis in AXES
+    )
+    if score_0 == score_1:
         return None
     return 0 if score_0 > score_1 else 1

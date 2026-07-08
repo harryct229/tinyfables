@@ -23,14 +23,15 @@ def test_derive_preference_prefers_higher_aggregate():
 
 
 def test_derive_preference_skips_ties():
-    r = {"moral": 3, "adherence": 3, "coherence": 3, "prose": 3}
-    assert derive_preference(r, dict(r)) is None
-
-
-def test_derive_preference_skips_mathematical_ties():
     a = {"moral": 1, "adherence": 1, "coherence": 1, "prose": 3}
     b = {"moral": 1, "adherence": 1, "coherence": 2, "prose": 1}
     assert derive_preference(a, b) is None
+
+
+def test_derive_preference_prefers_close_but_non_equal_scores():
+    a = {"moral": 1.0000000000005, "adherence": 1, "coherence": 1, "prose": 1}
+    b = {"moral": 1.0, "adherence": 1, "coherence": 1, "prose": 1}
+    assert derive_preference(a, b) == 0
 
 
 def test_moral_weight_dominates_a_single_axis_swing():

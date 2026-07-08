@@ -303,6 +303,35 @@ steps.
   DPO on the same derived preferences ships as the Aligned Model, and the PPO attempt becomes
   report material.
 
+### Implementation (issue 06, Track A)
+
+- **Rubric + labeler prompt (human artifacts).** `RUBRIC.md` (four Axes, anchored 1-5
+  definitions with example snippets) and `configs/labeler_prompt.yaml` (versioned
+  instruction template, `{rubric}`/`{pairs}` slots) are the human-authored definition
+  of "good". `prompt_version` is logged on every label; changing the rubric/template
+  without bumping `version` is a loud error at label time.
+- **`feedback.py` (torch-free).** Single source of truth for the ADR-0003 weights
+  (0.4/0.3/0.2/0.1); `aggregate_score`, `derive_preference` (ties skipped),
+  `weight_sensitivity` (±0.1 table), and the two audit metrics
+  (`position_flip_rate`, `self_consistency`).
+- **`pairgen` stage.** Mirrors `evaluate`: 2 independent samples (temp 0.9, seeded
+  per sample) per val FableSpec under the Canonical Prompt → `pairs.jsonl`;
+  `pairgen_summary.json` records the Base Model `checkpoint_sha` so preferences trace
+  back to the exact model.
+- **`label` stage (AI Labeler, ADR-0004).** Resumable headless `claude -p` behind an
+  injected `runner`; append-only `labels.jsonl` cache keyed by
+  `(pair_id, phase, order, model_version, prompt_version)` doubles as the offline
+  replay fixture. Work list interleaves the Calibration passes (start/middle/end) and
+  the 10% position-swap slice. Tests use a deterministic fake runner; one schema
+  contract test validates parsing against a recorded sample. `AuditConfig.
+  position_swap_review_threshold` documents the high-flip review threshold for the
+  qualitative position-swap flag, so the audit contract records both the measured flip
+  rate and when it should trigger manual review.
+- **`derive` + `audit` stages.** `derive` → `preferences.jsonl` (chosen/rejected +
+  aggregates + deterministic train/held-out split) + `sensitivity.json`; `audit` →
+  `audit_report.md`/`audit.json` (flip rate + self-consistency vs the ≥0.85 gate).
+- **Track B (real run): _pending_** — gate numbers recorded below after the labeling run.
+
 ## Evaluation
 
 | Layer | What | Cost |

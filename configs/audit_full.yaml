@@ -1,0 +1,3 @@
+# Real labeler audit (issue 06, Track B) over the real labeling cache.
+labels: runs/labels_base/labels.jsonl
+self_consistency_gate: 0.85

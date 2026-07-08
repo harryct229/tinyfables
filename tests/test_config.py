@@ -189,6 +189,13 @@ def test_eval_config_rejects_unknown_key(tmp_path):
         load_config(p, EvalConfig)
 
 
+def test_audit_config_defaults():
+    from tinyfables.config import AuditConfig
+
+    cfg = AuditConfig(labels="runs/labels/labels.jsonl")
+    assert cfg.self_consistency_gate == 0.85
+
+
 def test_pairgen_config_defaults_match_the_feedback_spec():
     from tinyfables.config import PairgenConfig, SourceSpec
 

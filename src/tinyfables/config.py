@@ -161,6 +161,12 @@ class DeriveConfig:
             raise ValueError("weight_delta must be in (0, 1)")
 
 
+@dataclass(frozen=True)
+class AuditConfig:
+    labels: str
+    self_consistency_gate: float = 0.85
+
+
 def _build(cls: type[T], data: Any) -> T:
     if not isinstance(data, dict):
         raise TypeError(f"expected a mapping for {cls.__name__}, got {type(data).__name__}")

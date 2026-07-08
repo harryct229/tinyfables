@@ -3,6 +3,7 @@ module (and imports it) only at dispatch time, so heavy stages (torch/trl) only
 pay their import cost when actually invoked."""
 
 from tinyfables.config import (
+    AuditConfig,
     BenchmarkConfig,
     DeriveConfig,
     EvalConfig,
@@ -19,6 +20,7 @@ REGISTRY: dict[str, tuple[type, str]] = {
     "benchmark": (BenchmarkConfig, "tinyfables.stages.benchmark"),
     "pretrain": (PretrainConfig, "tinyfables.stages.pretrain"),
     "evaluate": (EvalConfig, "tinyfables.stages.evaluate"),
+    "audit": (AuditConfig, "tinyfables.stages.audit"),
     "pairgen": (PairgenConfig, "tinyfables.stages.pairgen"),
     "label": (LabelConfig, "tinyfables.stages.label"),
     "derive": (DeriveConfig, "tinyfables.stages.derive"),

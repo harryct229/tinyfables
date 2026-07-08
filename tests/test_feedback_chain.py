@@ -1,3 +1,4 @@
+import hashlib
 import json
 from pathlib import Path
 
@@ -29,7 +30,7 @@ def _fake_runner(prompt, model):
     ids = [ln.split("pair_id: ")[1].strip() for ln in prompt.splitlines() if "pair_id: " in ln]
 
     def rate(seedtext):
-        h = abs(hash(seedtext))
+        h = int.from_bytes(hashlib.sha256(seedtext.encode("utf-8")).digest()[:8], "big")
         return {a: 1 + (h >> (3 * j)) % 5 for j, a in enumerate(AXES)}
 
     return json.dumps(

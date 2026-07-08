@@ -31,3 +31,17 @@
 ## Commit
 
 - `test(feedback): full-config validation + offline pairgen->label->derive->audit chain; design note (issue 06 Track A)`
+
+## Review Fixes
+
+- Strengthened `tests/test_full_configs.py` to pin Track B real-run targets and shapes for
+  `pairgen_full`, `label_full`, `derive_full`, and `audit_full`.
+- Replaced the salted built-in `hash()` in `tests/test_feedback_chain.py` with a stable
+  `hashlib.sha256`-based rating function.
+
+## Verification
+
+- Focused: `rtk env PYTHONPATH=src /Users/thanh/code/tinystories/.venv/bin/pytest tests/test_full_configs.py tests/test_feedback_chain.py -q`
+  - Output: `7 passed in 2.28s`
+- Full suite: `rtk env PYTHONPATH=src /Users/thanh/code/tinystories/.venv/bin/pytest -q`
+  - Output: `187 passed, 1 deselected in 5.93s`

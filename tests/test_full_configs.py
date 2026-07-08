@@ -41,8 +41,19 @@ def test_pairgen_full_targets_2000_pairs_at_temp_0_9():
     from tinyfables.config import PairgenConfig
 
     cfg = load_config(REPO / "configs" / "pairgen_full.yaml", PairgenConfig)
+    assert cfg.checkpoint == "runs/base_model"
+    assert cfg.tokenizer_dir == "runs/tokenizer_full"
+    assert cfg.source.hf_dataset == "klusai/ds-tf1-en-3m"
+    assert cfg.source.hf_split == "validation"
+    assert cfg.source.max_rows == 8000
+    assert cfg.n_ctx == 1024
     assert cfg.n_pairs == 2000
+    assert cfg.max_new_tokens == 320
+    assert cfg.min_new_tokens == 80
     assert cfg.temperature == 0.9
+    assert cfg.top_k == 50
+    assert cfg.seed == 0
+    assert cfg.device == "auto"
     assert cfg.source.hf_split == "validation"
 
 
@@ -50,16 +61,26 @@ def test_label_full_uses_rubric_and_versioned_prompt():
     from tinyfables.config import LabelConfig
 
     cfg = load_config(REPO / "configs" / "label_full.yaml", LabelConfig)
+    assert cfg.pairs == "runs/pairgen_base/pairs.jsonl"
     assert cfg.rubric == "RUBRIC.md"
     assert cfg.labeler_prompt == "configs/labeler_prompt.yaml"
-    assert cfg.swap_fraction == 0.10 and cfg.calibration_size == 30
-    assert cfg.model
+    assert cfg.model == "claude-opus-4-8"
+    assert cfg.batch_size == 5
+    assert cfg.swap_fraction == 0.10
+    assert cfg.calibration_size == 30
+    assert cfg.seed == 0
 
 
 def test_derive_and_audit_full_configs_load():
     from tinyfables.config import AuditConfig, DeriveConfig
 
     d = load_config(REPO / "configs" / "derive_full.yaml", DeriveConfig)
+    assert d.labels == "runs/labels_base/labels.jsonl"
+    assert d.pairs == "runs/pairgen_base/pairs.jsonl"
     assert d.weight_delta == 0.1
+    assert d.held_out_fraction == 0.10
+    assert d.seed == 0
     a = load_config(REPO / "configs" / "audit_full.yaml", AuditConfig)
+    assert a.labels == "runs/labels_base/labels.jsonl"
     assert a.self_consistency_gate == 0.85
+    assert a.position_swap_review_threshold == 0.5

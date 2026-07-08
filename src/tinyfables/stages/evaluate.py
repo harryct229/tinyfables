@@ -75,7 +75,9 @@ def run(cfg: EvalConfig, out_dir: Path) -> None:
     need = max(cfg.n_perplexity_rows, cfg.n_generations * 4)
     rows = list(itertools.islice(iter_rows(cfg.source, cfg.seed), need))
 
-    mean_loss, ppl = fable_token_perplexity(model, tok, rows, cfg.n_ctx, device, cfg.n_perplexity_rows)
+    mean_loss, ppl, n_ppl_rows = fable_token_perplexity(
+        model, tok, rows, cfg.n_ctx, device, cfg.n_perplexity_rows
+    )
 
     specs: list[FableSpec] = []
     for r in rows:
@@ -125,7 +127,7 @@ def run(cfg: EvalConfig, out_dir: Path) -> None:
     joined = "\n".join(canonical_fables)
     metrics = {
         "perplexity": {"fable_token_loss": round(mean_loss, 4), "perplexity": round(ppl, 4),
-                       "n_rows": min(cfg.n_perplexity_rows, len(rows))},
+                       "n_rows": n_ppl_rows},
         "generation": {
             "n_specs": len(canonical_fables),
             "distinct_1": round(distinct_n(joined, 1), 4),

@@ -3,7 +3,8 @@
 Each validation row is scored as `prompt + fable + EOT`, but prompt tokens are
 masked so the cross-entropy matches training: only completion tokens contribute
 to loss. Rows longer than `n_ctx` are skipped. The result is the mean loss over
-all scored completion tokens and its perplexity.
+all scored completion tokens, its perplexity, and the number of rows actually
+scored.
 """
 
 from __future__ import annotations
@@ -16,7 +17,7 @@ import torch.nn.functional as F
 from tinyfables.constants import EOT
 
 
-def fable_token_perplexity(model, tokenizer, rows, n_ctx, device, max_rows) -> tuple[float, float]:
+def fable_token_perplexity(model, tokenizer, rows, n_ctx, device, max_rows) -> tuple[float, float, int]:
     eot_id = tokenizer.token_to_id(EOT)
     if eot_id is None:
         raise ValueError(f"tokenizer is missing required special token {EOT!r}")
@@ -52,7 +53,7 @@ def fable_token_perplexity(model, tokenizer, rows, n_ctx, device, max_rows) -> t
             n_used += 1
 
     if total_tokens == 0:
-        return float("nan"), float("nan")
+        return float("nan"), float("nan"), 0
 
     mean_loss = total_loss / total_tokens
-    return mean_loss, math.exp(mean_loss)
+    return mean_loss, math.exp(mean_loss), n_used

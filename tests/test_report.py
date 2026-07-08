@@ -41,8 +41,8 @@ METRICS = {
         },
     },
     "provenance": {
-        "checkpoint_sha": "abc123def456",
-        "tokenizer_sha": "def789",
+        "checkpoint_sha": "abc123def4567890",
+        "tokenizer_sha": "def789abc1234560",
         "seed": 0,
         "versions": {"torch": "2.11"},
     },
@@ -57,4 +57,5 @@ def test_write_eval_report_renders_tables(tmp_path):
     assert "distinct-1" in md and "0.42" in md
     assert md.index("canonical") < md.index("seen-template") < md.index("held-out-template")
     assert "held-out-template" in md and "0.415" in md
-    assert "abc123def456"[:12] in md
+    assert "abc123def4567890" in md
+    assert "def789abc1234560" in md

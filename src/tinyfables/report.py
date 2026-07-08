@@ -63,8 +63,8 @@ def write_eval_report(out_dir, metrics) -> Path:
         [
             "",
             "## Provenance",
-            f"- checkpoint: `{provenance['checkpoint_sha'][:12]}`",
-            f"- tokenizer: `{provenance['tokenizer_sha'][:12]}`",
+            f"- checkpoint: `{provenance['checkpoint_sha']}`",
+            f"- tokenizer: `{provenance['tokenizer_sha']}`",
             f"- seed: {provenance['seed']}",
             f"- versions: {provenance['versions']}",
             "",

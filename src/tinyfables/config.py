@@ -112,6 +112,21 @@ class EvalConfig:
     device: str = "auto"
 
 
+@dataclass(frozen=True)
+class PairgenConfig:
+    checkpoint: str
+    tokenizer_dir: str
+    source: SourceSpec
+    n_ctx: int = 1024
+    n_pairs: int = 2000
+    max_new_tokens: int = 320
+    min_new_tokens: int = 80
+    temperature: float = 0.9
+    top_k: int = 50
+    seed: int = 0
+    device: str = "auto"
+
+
 def _build(cls: type[T], data: Any) -> T:
     if not isinstance(data, dict):
         raise TypeError(f"expected a mapping for {cls.__name__}, got {type(data).__name__}")

@@ -187,3 +187,16 @@ def test_eval_config_rejects_unknown_key(tmp_path):
     p.write_text("checkpoint: c\ntokenizer_dir: t\nsource:\n  jsonl_path: x.jsonl\nbogus: 1\n")
     with pytest.raises(KeyError):
         load_config(p, EvalConfig)
+
+
+def test_pairgen_config_defaults_match_the_feedback_spec():
+    from tinyfables.config import PairgenConfig, SourceSpec
+
+    cfg = PairgenConfig(
+        checkpoint="runs/base_model",
+        tokenizer_dir="runs/tokenizer_full",
+        source=SourceSpec(hf_dataset="klusai/ds-tf1-en-3m", hf_split="validation"),
+    )
+    assert cfg.n_pairs == 2000
+    assert cfg.temperature == 0.9
+    assert cfg.max_new_tokens == 320

@@ -1,0 +1,18 @@
+# Real pair generation (issue 06, Track B): ~2,000 pairs = 2 samples per val
+# FableSpec from the Base Model (~4,000 generations, under an hour on T4).
+# checkpoint set at run time to the Base Model dir (runs/base_model or a snapshot
+# of congthanh991/tinyfables-13m-base).
+checkpoint: runs/base_model
+tokenizer_dir: runs/tokenizer_full
+source:
+  hf_dataset: klusai/ds-tf1-en-3m
+  hf_split: validation
+  max_rows: 8000
+n_ctx: 1024
+n_pairs: 2000
+max_new_tokens: 320
+min_new_tokens: 80
+temperature: 0.9
+top_k: 50
+seed: 0
+device: auto

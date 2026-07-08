@@ -154,6 +154,12 @@ class DeriveConfig:
     held_out_fraction: float = 0.10
     seed: int = 0
 
+    def __post_init__(self) -> None:
+        if not 0.0 <= self.held_out_fraction <= 1.0:
+            raise ValueError("held_out_fraction must be in [0, 1]")
+        if not 0.0 < self.weight_delta < 1.0:
+            raise ValueError("weight_delta must be in (0, 1)")
+
 
 def _build(cls: type[T], data: Any) -> T:
     if not isinstance(data, dict):

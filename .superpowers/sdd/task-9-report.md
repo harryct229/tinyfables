@@ -17,3 +17,21 @@ rtk env PYTHONPATH=src /Users/thanh/code/tinystories/.venv/bin/pytest tests/test
 ```
 
 Result: `24 passed`.
+
+Review fix:
+
+- `src/tinyfables/stages/derive.py` now collapses append-only cache rows to one canonical `main`/`ab` label per `pair_id` before deriving preferences. The rule is explicit and stable: choose the row with the highest `(prompt_version, model_version)` tuple, then emit output in sorted `pair_id` order.
+- Added a regression test that appends a newer canonical label version for an existing pair and verifies `preferences.jsonl`, `derive_summary.json`, and `sensitivity.json` still count that pair exactly once while using the newer ratings.
+- Added low-risk `DeriveConfig` validation for `held_out_fraction` and `weight_delta`.
+
+Verification:
+
+```bash
+rtk env PYTHONPATH=src /Users/thanh/code/tinystories/.venv/bin/pytest tests/test_derive_stage.py tests/test_config.py -q
+```
+
+Output:
+
+```text
+26 passed in 0.07s
+```

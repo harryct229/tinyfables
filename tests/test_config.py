@@ -222,3 +222,12 @@ def test_derive_config_defaults():
     cfg = DeriveConfig(labels="runs/labels/labels.jsonl", pairs="runs/pairs/pairs.jsonl")
     assert cfg.weight_delta == 0.1
     assert cfg.held_out_fraction == 0.10
+
+
+def test_derive_config_rejects_invalid_ranges():
+    from tinyfables.config import DeriveConfig
+
+    with pytest.raises(ValueError):
+        DeriveConfig(labels="runs/labels/labels.jsonl", pairs="runs/pairs/pairs.jsonl", held_out_fraction=1.1)
+    with pytest.raises(ValueError):
+        DeriveConfig(labels="runs/labels/labels.jsonl", pairs="runs/pairs/pairs.jsonl", weight_delta=0.0)

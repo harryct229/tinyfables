@@ -23,19 +23,30 @@ def _read_pairs(path: str | Path) -> dict[str, dict]:
     return {row["pair_id"]: row for row in rows}
 
 
+def _canonical_main_labels(cache: dict[tuple, dict]) -> list[dict]:
+    canonical: dict[str, dict] = {}
+    for rec in cache.values():
+        if rec["phase"] != "main" or rec["order"] != "ab":
+            continue
+        pair_id = rec["pair_id"]
+        current = canonical.get(pair_id)
+        if current is None or (
+            rec["prompt_version"],
+            rec["model_version"],
+        ) > (
+            current["prompt_version"],
+            current["model_version"],
+        ):
+            canonical[pair_id] = rec
+    return [canonical[pair_id] for pair_id in sorted(canonical)]
+
+
 def run(cfg: DeriveConfig, out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     cache = load_cache(cfg.labels)
     pairs = _read_pairs(cfg.pairs)
 
-    mains = sorted(
-        (
-            rec
-            for rec in cache.values()
-            if rec["phase"] == "main" and rec["order"] == "ab"
-        ),
-        key=lambda rec: rec["pair_id"],
-    )
+    mains = _canonical_main_labels(cache)
 
     preferences = []
     pair_ratings = []

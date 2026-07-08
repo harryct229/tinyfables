@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from tinyfables.config import DeriveConfig
+from tinyfables.feedback import WEIGHTS, aggregate_score
 from tinyfables.stages import REGISTRY
 from tinyfables.stages import derive as derive_stage
 
@@ -45,3 +46,41 @@ def test_derive_writes_sensitivity_table_and_manifest(tmp_path):
     manifest = json.loads((out / "manifest.json").read_text())
     assert manifest["stage"] == "derive"
     assert "labels.jsonl" in manifest["inputs"] and "pairs.jsonl" in manifest["inputs"]
+
+
+def test_derive_uses_latest_canonical_label_version_once(tmp_path):
+    labels_path = tmp_path / "labels.jsonl"
+    labels_path.write_text((FIX / "labels_replay.jsonl").read_text())
+    duplicate = {
+        "pair_id": "pair-000000",
+        "phase": "main",
+        "order": "ab",
+        "model_version": "zz-latest",
+        "prompt_version": 2,
+        "rubric_sha": "fixturesha",
+        "prompt_sha": "fixturesha",
+        "ratings_0": {"moral": 1, "adherence": 1, "coherence": 1, "prose": 1},
+        "ratings_1": {"moral": 5, "adherence": 5, "coherence": 5, "prose": 5},
+    }
+    with labels_path.open("a") as fh:
+        fh.write(json.dumps(duplicate) + "\n")
+
+    out = tmp_path / "derive"
+    derive_stage.run(DeriveConfig(labels=str(labels_path), pairs=PAIRS), out)
+
+    prefs = [json.loads(line) for line in (out / "preferences.jsonl").read_text().splitlines()]
+    pair_rows = [row for row in prefs if row["pair_id"] == "pair-000000"]
+    assert len(pair_rows) == 1
+    row = pair_rows[0]
+    assert row["chosen"] == "fable zero B"
+    assert row["rejected"] == "fable zero A"
+    assert row["aggregate_chosen"] == round(aggregate_score(duplicate["ratings_1"], WEIGHTS), 4)
+    assert row["aggregate_rejected"] == round(aggregate_score(duplicate["ratings_0"], WEIGHTS), 4)
+
+    summary = json.loads((out / "derive_summary.json").read_text())
+    assert summary["n_pairs_labeled"] == 6
+    assert summary["n_preferences"] == 5
+    assert summary["n_ties_skipped"] == 1
+
+    sens = json.loads((out / "sensitivity.json").read_text())
+    assert sens["n_base_preferences"] == 5

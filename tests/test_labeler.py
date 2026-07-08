@@ -66,32 +66,60 @@ def test_build_batch_prompt_embeds_rubric_and_every_pair():
 
 
 def test_parse_valid_response_returns_labels_in_expected_order():
-    text = FIX.read_text()
-    ids = [row["pair_id"] for row in json.loads(text)["labels"]]
-    labels = parse_labeler_response(text, ids)
-    assert [l.pair_id for l in labels] == ids
+    payload = {
+        "labels": [
+            {
+                "pair_id": "pair-000001",
+                "fable_a": {"moral": 4, "adherence": 3, "coherence": 4, "prose": 3},
+                "fable_b": {"moral": 2, "adherence": 2, "coherence": 3, "prose": 3},
+                "justification": "A is closer to the requested lesson.",
+            },
+            {
+                "pair_id": "pair-000002",
+                "fable_a": {"moral": 3, "adherence": 4, "coherence": 4, "prose": 4},
+                "fable_b": {"moral": 5, "adherence": 4, "coherence": 5, "prose": 4},
+            },
+        ]
+    }
+    text = json.dumps(payload)
+    labels = parse_labeler_response(text, ["pair-000001", "pair-000002"])
+    assert [l.pair_id for l in labels] == ["pair-000001", "pair-000002"]
     for label in labels:
         assert isinstance(label, PairLabel)
         for side in (label.ratings_a, label.ratings_b):
             assert set(side) == {"moral", "adherence", "coherence", "prose"}
             assert all(isinstance(v, int) and 1 <= v <= 5 for v in side.values())
+    assert labels[1].justification is None
 
 
 def test_parse_extracts_json_from_surrounding_prose():
-    body = (
-        '{"labels":[{"pair_id":"p0",'
-        '"fable_a":{"moral":4,"adherence":3,"coherence":4,"prose":3},'
-        '"fable_b":{"moral":2,"adherence":2,"coherence":3,"prose":3}}]}'
+    body = json.dumps(
+        {
+            "labels": [
+                {
+                    "pair_id": "p0",
+                    "fable_a": {"moral": 4, "adherence": 3, "coherence": 4, "prose": 3},
+                    "fable_b": {"moral": 2, "adherence": 2, "coherence": 3, "prose": 3},
+                }
+            ]
+        }
     )
-    labels = parse_labeler_response("Sure! Here it is:\n" + body + "\nDone.", ["p0"])
+    text = "Intro with braces {not json}\n```json\n" + body + "\n```\nDone."
+    labels = parse_labeler_response(text, ["p0"])
     assert labels[0].ratings_a["moral"] == 4
 
 
 def test_parse_rejects_missing_pair():
-    body = (
-        '{"labels":[{"pair_id":"p0",'
-        '"fable_a":{"moral":4,"adherence":3,"coherence":4,"prose":3},'
-        '"fable_b":{"moral":2,"adherence":2,"coherence":3,"prose":3}}]}'
+    body = json.dumps(
+        {
+            "labels": [
+                {
+                    "pair_id": "p0",
+                    "fable_a": {"moral": 4, "adherence": 3, "coherence": 4, "prose": 3},
+                    "fable_b": {"moral": 2, "adherence": 2, "coherence": 3, "prose": 3},
+                }
+            ]
+        }
     )
     with pytest.raises(LabelerError):
         parse_labeler_response(body, ["p0", "p1"])
@@ -109,13 +137,51 @@ def test_parse_rejects_out_of_range_and_non_int():
 
 
 def test_parse_rejects_missing_axis():
-    body = (
-        '{"labels":[{"pair_id":"p0",'
-        '"fable_a":{"moral":4,"adherence":3,"coherence":4},'
-        '"fable_b":{"moral":2,"adherence":2,"coherence":3,"prose":3}}]}'
+    body = json.dumps(
+        {
+            "labels": [
+                {
+                    "pair_id": "p0",
+                    "fable_a": {"moral": 4, "adherence": 3, "coherence": 4},
+                    "fable_b": {"moral": 2, "adherence": 2, "coherence": 3, "prose": 3},
+                }
+            ]
+        }
     )
     with pytest.raises(LabelerError):
         parse_labeler_response(body, ["p0"])
+
+
+def test_parse_rejects_non_string_justification_but_allows_null():
+    body = json.dumps(
+        {
+            "labels": [
+                {
+                    "pair_id": "p0",
+                    "fable_a": {"moral": 4, "adherence": 3, "coherence": 4, "prose": 3},
+                    "fable_b": {"moral": 2, "adherence": 2, "coherence": 3, "prose": 3},
+                    "justification": None,
+                }
+            ]
+        }
+    )
+    labels = parse_labeler_response(body, ["p0"])
+    assert labels[0].justification is None
+
+    bad = json.dumps(
+        {
+            "labels": [
+                {
+                    "pair_id": "p0",
+                    "fable_a": {"moral": 4, "adherence": 3, "coherence": 4, "prose": 3},
+                    "fable_b": {"moral": 2, "adherence": 2, "coherence": 3, "prose": 3},
+                    "justification": 123,
+                }
+            ]
+        }
+    )
+    with pytest.raises(LabelerError):
+        parse_labeler_response(bad, ["p0"])
 
 
 def test_recorded_sample_is_the_schema_contract():

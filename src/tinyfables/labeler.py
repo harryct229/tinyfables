@@ -48,17 +48,18 @@ def build_batch_prompt(rubric_text: str, template_text: str, batch: list[dict]) 
 
 
 def _extract_json_object(text: str) -> dict:
+    decoder = json.JSONDecoder()
     start = text.find("{")
-    end = text.rfind("}")
-    if start == -1 or end == -1 or end < start:
-        raise LabelerError(f"no JSON object found in labeler response: {text[:200]!r}")
-    try:
-        payload = json.loads(text[start : end + 1])
-    except json.JSONDecodeError as e:
-        raise LabelerError(f"labeler response is not valid JSON: {e}") from e
-    if not isinstance(payload, dict):
-        raise LabelerError("labeler response JSON must be an object")
-    return payload
+    while start != -1:
+        try:
+            payload, _ = decoder.raw_decode(text, start)
+        except json.JSONDecodeError:
+            start = text.find("{", start + 1)
+            continue
+        if isinstance(payload, dict):
+            return payload
+        start = text.find("{", start + 1)
+    raise LabelerError(f"no JSON object found in labeler response: {text[:200]!r}")
 
 
 def _validate_ratings(obj, pair_id: str, side: str) -> dict[str, int]:
@@ -95,12 +96,15 @@ def parse_labeler_response(text: str, expected_pair_ids: list[str]) -> list[Pair
         if pid not in by_id:
             raise LabelerError(f"labeler response missing expected pair {pid!r}")
         row = by_id[pid]
+        justification = row.get("justification")
+        if "justification" in row and justification is not None and not isinstance(justification, str):
+            raise LabelerError(f"{pid}: justification must be a string or null, got {justification!r}")
         labels.append(
             PairLabel(
                 pair_id=pid,
                 ratings_a=_validate_ratings(row.get("fable_a"), pid, "fable_a"),
                 ratings_b=_validate_ratings(row.get("fable_b"), pid, "fable_b"),
-                justification=row.get("justification") if isinstance(row.get("justification"), str) else None,
+                justification=justification,
             )
         )
     return labels

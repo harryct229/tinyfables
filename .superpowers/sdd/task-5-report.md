@@ -13,3 +13,12 @@ Verification:
 
 Concerns:
 - None for this task; Task 6 will supply the Claude runner and cache plumbing that consumes this parser.
+
+Fix review follow-up:
+- Replaced brace-slicing JSON extraction in `src/tinyfables/labeler.py` with `json.JSONDecoder().raw_decode` scanning so the parser can find the first valid JSON object in prose or fenced text, even when earlier prose contains braces.
+- Tightened `justification` validation so present non-string values now raise `LabelerError`, while missing or `null` values remain accepted.
+- Updated `tests/test_labeler.py` so only `test_recorded_sample_is_the_schema_contract` uses `tests/fixtures/labeler_response_sample.json`; the ordinary valid parse test now uses synthetic inline JSON, and added coverage for `justification: null` versus a non-string value.
+
+Verification:
+- Command: `rtk env PYTHONPATH=src /Users/thanh/code/tinystories/.venv/bin/pytest tests/test_labeler.py -q`
+- Result: `11 passed in 0.02s`

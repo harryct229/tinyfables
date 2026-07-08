@@ -242,6 +242,23 @@ Colab budget. **Week-1 gate: measured T4 tokens/sec benchmark before committing*
   is the keyword-regex baseline the extraction must beat; precision is hand-validated in Track B.
 - **Distinct-n / repetition / length** round out the generation-quality view. No new deps
   (stdlib `re`/`difflib`/`statistics`).
+- **Track B real Base Model eval (Colab T4, 2026-07-08).** Ran
+  `python -m tinyfables run evaluate --config configs/eval_full.yaml --out runs/eval_base`
+  against `congthanh991/tinyfables-13m-base` + `congthanh991/tinyfables-tokenizer`;
+  artifacts stayed at `/content/tinyfables/runs/eval_base` because Drive was not mounted.
+  Eval finished in 4.9 min. Fable-token loss/perplexity: `1.402` / `4.063` over 500 rows.
+  Generation: 50 specs, distinct-1 `0.133`, distinct-2 `0.565`, repetition-4 `0.051`,
+  length mean/median `252.1/253`, min/max `233/270`, moral delivery `0.380` at threshold
+  `0.300`. Adherence grid: canonical overall `0.145` (character `0.580`, moral `0.380`),
+  seen-template overall `0.130` (character `0.500`, challenge `0.020`, moral `0.320`),
+  held-out-template overall `0.090` (character `0.360`, moral `0.280`). Provenance:
+  checkpoint sha `edbd8f125a9bf12578e4b5246eebbbab51b93c9fa169f785373bb4db95065e0a`,
+  tokenizer sha `9d53402d4c4dd94d0d7bf133ea8073cf966413e510b8b3a8c813ae0ecc625dfb`,
+  seed `0`, versions `{tinyfables: 0.1.0, tokenizers: 0.22.2, numpy: 2.0.2,
+  torch: 2.11.0+cu128, transformers: 5.12.1}`. Moral extraction hand validation over all
+  50 `moral_calibration.jsonl` rows: ours `27/50 = 0.54`, naive regex `0/50 = 0.00`
+  (`naive` was null on all 50 rows), so the extraction beats the baseline; residual risk is
+  that many misses are outcome/title captures after an explicit moral sentence.
 
 ## Build vs buy
 

@@ -17,3 +17,15 @@ rtk env PYTHONPATH=src /Users/thanh/code/tinystories/.venv/bin/pytest tests/test
 ```
 
 Result: `25 passed`.
+
+Append for review fix:
+- `audit.json` now includes `gate.position_swap_review_flag`, set from `position_swap.n_flipped > 0`.
+- `audit_report.md` now includes a position-swap verdict line that reads `REVIEW` when flips are observed, otherwise `no flips observed`.
+
+Verification rerun:
+
+```bash
+rtk env PYTHONPATH=src /Users/thanh/code/tinystories/.venv/bin/pytest tests/test_audit_stage.py tests/test_config.py -q
+```
+
+Result: `25 passed in 0.06s`

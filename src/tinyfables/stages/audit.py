@@ -23,6 +23,7 @@ def run(cfg: AuditConfig, out_dir: Path) -> None:
     swap = position_flip_rate(instances)
     consistency = self_consistency(instances)
     passed = consistency["mean_agreement"] >= cfg.self_consistency_gate
+    review_flag = swap["n_flipped"] > 0
 
     audit = {
         "position_swap": swap,
@@ -30,6 +31,7 @@ def run(cfg: AuditConfig, out_dir: Path) -> None:
         "gate": {
             "self_consistency_gate": cfg.self_consistency_gate,
             "self_consistency_pass": passed,
+            "position_swap_review_flag": review_flag,
         },
     }
 
@@ -37,6 +39,7 @@ def run(cfg: AuditConfig, out_dir: Path) -> None:
     audit_path.write_text(json.dumps(audit, indent=2, sort_keys=True) + "\n")
 
     verdict = "PASS" if passed else "BELOW GATE - flag for issue 07"
+    swap_verdict = "REVIEW" if review_flag else "no flips observed"
     report_lines = [
         "# Labeler audit report",
         "",
@@ -46,6 +49,7 @@ def run(cfg: AuditConfig, out_dir: Path) -> None:
         f"| Calibration self-consistency | {consistency['mean_agreement']:.3f} ({consistency['n_unanimous']}/{consistency['n_pairs']} unanimous) |",
         "",
         f"Verdict: {verdict} (gate {cfg.self_consistency_gate:.2f})",
+        f"Position-swap review: {swap_verdict}",
         "",
     ]
     report_path = out_dir / "audit_report.md"

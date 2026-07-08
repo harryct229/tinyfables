@@ -19,11 +19,14 @@ def test_audit_reports_both_numbers_and_gate(tmp_path):
     a = json.loads((out / "audit.json").read_text())
     assert a["position_swap"]["n_pairs"] == 2
     assert a["position_swap"]["flip_rate"] == 0.5
+    assert a["gate"]["position_swap_review_flag"] is True
     assert a["self_consistency"]["n_pairs"] == 2
     assert 0.0 <= a["self_consistency"]["mean_agreement"] <= 1.0
     assert isinstance(a["gate"]["self_consistency_pass"], bool)
     report = (out / "audit_report.md").read_text()
-    assert "flip rate" in report.lower() and "self-consistency" in report.lower()
+    lowered = report.lower()
+    assert "flip rate" in lowered and "self-consistency" in lowered
+    assert "position-swap review: review" in lowered
 
 
 def test_audit_gate_flags_below_threshold(tmp_path):

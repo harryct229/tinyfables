@@ -1,0 +1,14 @@
+# Toy eval over the fixture (CPU, seconds) — smoke-tests the whole suite.
+checkpoint: runs/pretrain_toy
+tokenizer_dir: runs/tokenizer_toy
+source:
+  jsonl_path: tests/fixtures/tiny_corpus.jsonl
+paraphrase_bank: configs/paraphrases.yaml
+n_ctx: 512
+n_perplexity_rows: 8
+n_generations: 4
+max_new_tokens: 48
+min_new_tokens: 8
+top_k: 20
+seed: 0
+device: cpu

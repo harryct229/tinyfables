@@ -223,6 +223,26 @@ Colab budget. **Week-1 gate: measured T4 tokens/sec benchmark before committing*
   it). `render_canonical_prompt` reproduces the real band-B template byte-for-byte and
   raises on any non-4-7 age; `parse_canonical_prompt` requires the exact structure.
 
+### Implementation (issue 05)
+
+- **`evaluate` stage.** One command (`python -m tinyfables run evaluate --config … --out …`)
+  scores any checkpoint into `eval_metrics.json` (machine), `eval_report.md` (report tables),
+  and `moral_calibration.jsonl` (hand-labeling worksheet), manifest last. Deterministic given
+  seed + eval set: perplexity has no sampling; generation is seeded per spec.
+- **Fable-token perplexity** (`perplexity.py`): completion-only next-token loss over the val
+  slice (prompt masked), so it means perplexity *of fables*; exp of the mean.
+- **Adherence robustness grid** (`eval_metrics.element_adherence`): verbatim (case-insensitive)
+  presence of each requested Element (character/setting/challenge/outcome) in the generated
+  fable — a mechanical, comparable proxy. Each spec is rendered under canonical + a seen
+  template + a held-out template and adherence is grouped by family; held-out templates are
+  eval-only (used here, never trained on).
+- **Moral delivery** (`moral.py`): `extract_moral` prefers the last `**bold**` segment but
+  falls back to the trailing sentence (the issue-04 Base Model rarely emits the marker), then
+  fuzzy-matches (SequenceMatcher) to the requested moral above a threshold. `naive_regex_moral`
+  is the keyword-regex baseline the extraction must beat; precision is hand-validated in Track B.
+- **Distinct-n / repetition / length** round out the generation-quality view. No new deps
+  (stdlib `re`/`difflib`/`statistics`).
+
 ## Build vs buy
 
 **Build** (line by line, pedagogical core): model, pretraining loop with checkpoint-resume,

@@ -5,9 +5,12 @@ import pytest
 import yaml
 
 from tinyfables.labeler import (
+    append_cache,
+    cache_key,
     LabelerError,
     PairLabel,
     build_batch_prompt,
+    load_cache,
     load_prompt,
     parse_labeler_response,
 )
@@ -193,3 +196,30 @@ def test_recorded_sample_is_the_schema_contract():
     assert "labels" in payload and payload["labels"]
     ids = [row["pair_id"] for row in payload["labels"]]
     parse_labeler_response(text, ids)
+
+
+def test_cache_key_is_a_stable_tuple():
+    k = cache_key("pair-0", "main", "ab", "claude-opus-4-8", 1)
+    assert k == ("pair-0", "main", "ab", "claude-opus-4-8", 1)
+
+
+def test_append_then_load_roundtrips_by_key(tmp_path):
+    path = tmp_path / "labels.jsonl"
+    rec = {
+        "pair_id": "pair-0",
+        "phase": "main",
+        "order": "ab",
+        "model_version": "claude-opus-4-8",
+        "prompt_version": 1,
+        "ratings_0": {"moral": 5, "adherence": 4, "coherence": 4, "prose": 3},
+        "ratings_1": {"moral": 2, "adherence": 3, "coherence": 3, "prose": 3},
+    }
+    append_cache(path, rec)
+    cache = load_cache(path)
+    key = cache_key("pair-0", "main", "ab", "claude-opus-4-8", 1)
+    assert key in cache
+    assert cache[key]["ratings_0"]["moral"] == 5
+
+
+def test_load_cache_missing_file_is_empty(tmp_path):
+    assert load_cache(tmp_path / "nope.jsonl") == {}

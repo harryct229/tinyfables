@@ -9,6 +9,7 @@ contract test validates `parse_labeler_response` against a recorded live sample.
 from __future__ import annotations
 
 import json
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -45,6 +46,61 @@ def build_batch_prompt(rubric_text: str, template_text: str, batch: list[dict]) 
             f"--- Fable B ---\n{row['fable_b']}\n"
         )
     return template_text.format(rubric=rubric_text, pairs="\n".join(blocks))
+
+
+def cache_key(
+    pair_id: str,
+    phase: str,
+    order: str,
+    model_version: str,
+    prompt_version: int,
+) -> tuple:
+    return (pair_id, phase, order, model_version, prompt_version)
+
+
+def load_cache(path: str | Path) -> dict[tuple, dict]:
+    p = Path(path)
+    if not p.exists():
+        return {}
+
+    out: dict[tuple, dict] = {}
+    for line in p.read_text().splitlines():
+        if not line.strip():
+            continue
+        rec = json.loads(line)
+        out[
+            cache_key(
+                rec["pair_id"],
+                rec["phase"],
+                rec["order"],
+                rec["model_version"],
+                rec["prompt_version"],
+            )
+        ] = rec
+    return out
+
+
+def append_cache(path: str | Path, record: dict) -> None:
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with p.open("a") as f:
+        f.write(json.dumps(record) + "\n")
+
+
+def claude_runner(prompt: str, model: str) -> str:
+    proc = subprocess.run(
+        ["claude", "-p", "--model", model, "--output-format", "text"],
+        input=prompt,
+        capture_output=True,
+        text=True,
+        timeout=600,
+    )
+    if proc.returncode != 0:
+        stderr = proc.stderr.strip()
+        if len(stderr) > 500:
+            stderr = stderr[:500]
+        raise LabelerError(f"claude -p failed (exit {proc.returncode}): {stderr}")
+    return proc.stdout
 
 
 def _extract_json_object(text: str) -> dict:

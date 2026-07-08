@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from itertools import combinations
+from statistics import mean
 from decimal import Decimal
 
 AXES: tuple[str, ...] = ("moral", "adherence", "coherence", "prose")
@@ -80,3 +82,52 @@ def weight_sensitivity(
             )
 
     return {"delta": delta, "n_base_preferences": len(non_tie_indices), "rows": rows}
+
+
+def _pref(inst: dict) -> int | None:
+    return derive_preference(inst["ratings_0"], inst["ratings_1"])
+
+
+def position_flip_rate(instances: list[dict]) -> dict:
+    """Position-swap audit over main/swap labels for the same pair."""
+
+    main = {inst["pair_id"]: inst for inst in instances if inst["phase"] == "main"}
+    swap = {inst["pair_id"]: inst for inst in instances if inst["phase"] == "swap"}
+    pair_ids = sorted(set(main) & set(swap))
+    n_flipped = sum(1 for pair_id in pair_ids if _pref(main[pair_id]) != _pref(swap[pair_id]))
+    n_pairs = len(pair_ids)
+    return {
+        "n_pairs": n_pairs,
+        "n_flipped": n_flipped,
+        "flip_rate": (n_flipped / n_pairs) if n_pairs else 0.0,
+    }
+
+
+def self_consistency(instances: list[dict]) -> dict:
+    """Calibration self-consistency over repeated labels for each pair."""
+
+    by_pair: dict[str, list[int | None]] = {}
+    for inst in instances:
+        if str(inst["phase"]).startswith("calib"):
+            by_pair.setdefault(inst["pair_id"], []).append(_pref(inst))
+
+    agreements = []
+    n_unanimous = 0
+    for prefs in by_pair.values():
+        if len(prefs) < 2:
+            continue
+        total_pairs = 0
+        n_agree = 0
+        for a, b in combinations(prefs, 2):
+            total_pairs += 1
+            if a == b:
+                n_agree += 1
+        agreements.append(n_agree / total_pairs)
+        if len(set(prefs)) == 1:
+            n_unanimous += 1
+
+    return {
+        "n_pairs": len(agreements),
+        "mean_agreement": mean(agreements) if agreements else 0.0,
+        "n_unanimous": n_unanimous,
+    }

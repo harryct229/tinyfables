@@ -5,7 +5,9 @@ from tinyfables.feedback import (
     WEIGHTS,
     aggregate_score,
     derive_preference,
+    position_flip_rate,
     perturb_weights,
+    self_consistency,
     weight_sensitivity,
 )
 
@@ -79,3 +81,46 @@ def test_weight_sensitivity_counts_flips_and_excludes_base_ties():
     assert prose_down["n_flipped"] == 1
     assert prose_down["pct_flipped"] == pytest.approx(0.5)
     assert all(r["n_flipped"] <= 1 for r in out["rows"])
+
+
+HI = {"moral": 5, "adherence": 5, "coherence": 5, "prose": 5}
+LO = {"moral": 1, "adherence": 1, "coherence": 1, "prose": 1}
+
+
+def _inst(pair_id, phase, order, r0, r1):
+    return {
+        "pair_id": pair_id,
+        "phase": phase,
+        "order": order,
+        "ratings_0": r0,
+        "ratings_1": r1,
+    }
+
+
+def test_position_flip_rate_counts_disagreement_between_orders():
+    instances = [
+        _inst("p1", "main", "ab", HI, LO),
+        _inst("p1", "swap", "ba", HI, LO),
+        _inst("p2", "main", "ab", HI, LO),
+        _inst("p2", "swap", "ba", LO, HI),
+        _inst("p3", "main", "ab", HI, LO),
+    ]
+    out = position_flip_rate(instances)
+    assert out["n_pairs"] == 2
+    assert out["n_flipped"] == 1
+    assert out["flip_rate"] == pytest.approx(0.5)
+
+
+def test_self_consistency_is_mean_pairwise_agreement():
+    instances = [
+        _inst("c1", "calib-0", "ab", HI, LO),
+        _inst("c1", "calib-1", "ab", HI, LO),
+        _inst("c1", "calib-2", "ab", HI, LO),
+        _inst("c2", "calib-0", "ab", HI, LO),
+        _inst("c2", "calib-1", "ab", HI, LO),
+        _inst("c2", "calib-2", "ab", LO, HI),
+    ]
+    out = self_consistency(instances)
+    assert out["n_pairs"] == 2
+    assert out["n_unanimous"] == 1
+    assert out["mean_agreement"] == pytest.approx((1.0 + 1 / 3) / 2)

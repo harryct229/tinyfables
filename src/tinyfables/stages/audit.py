@@ -12,7 +12,7 @@ from pathlib import Path
 
 from tinyfables.config import AuditConfig
 from tinyfables.feedback import position_flip_rate, self_consistency
-from tinyfables.labeler import load_cache
+from tinyfables.labeler import load_label_cohort
 from tinyfables.stage import write_manifest
 
 
@@ -22,11 +22,9 @@ def run(cfg: AuditConfig, out_dir: Path) -> None:
     if not labels_path.exists():
         raise FileNotFoundError(f"labels cache not found: {labels_path}")
 
-    cache = load_cache(labels_path)
-    if not cache:
+    instances, _summary = load_label_cohort(labels_path)
+    if not instances:
         raise ValueError(f"labels cache is empty: {labels_path}")
-
-    instances = list(cache.values())
 
     swap = position_flip_rate(instances)
     consistency = self_consistency(instances)

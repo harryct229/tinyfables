@@ -44,10 +44,6 @@ def _spec_from_prompt(prompt: str) -> FableSpec | None:
 
 def run(cfg: PairgenConfig, out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
-    device = _resolve_device(cfg.device)
-    tok = Tokenizer.from_file(str(Path(cfg.tokenizer_dir) / "tokenizer.json"))
-    model = GPT.from_pretrained(cfg.checkpoint).to(device).eval()
-
     rows = itertools.islice(iter_rows(cfg.source, cfg.seed), cfg.n_pairs * 4)
     specs: list[FableSpec] = []
     for row in rows:
@@ -56,6 +52,15 @@ def run(cfg: PairgenConfig, out_dir: Path) -> None:
             specs.append(spec)
         if len(specs) >= cfg.n_pairs:
             break
+    if len(specs) < cfg.n_pairs:
+        raise ValueError(
+            f"pairgen requested {cfg.n_pairs} pairs but only found {len(specs)} canonical prompts "
+            f"in {cfg.source}"
+        )
+
+    device = _resolve_device(cfg.device)
+    tok = Tokenizer.from_file(str(Path(cfg.tokenizer_dir) / "tokenizer.json"))
+    model = GPT.from_pretrained(cfg.checkpoint).to(device).eval()
 
     def _gen(prompt_text: str, seed: int) -> str:
         return generate_fable(

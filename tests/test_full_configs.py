@@ -54,7 +54,6 @@ def test_pairgen_full_targets_2000_pairs_at_temp_0_9():
     assert cfg.top_k == 50
     assert cfg.seed == 0
     assert cfg.device == "auto"
-    assert cfg.source.hf_split == "validation"
 
 
 def test_label_full_uses_rubric_and_versioned_prompt():

@@ -1,3 +1,6 @@
+import re
+from pathlib import Path
+
 import pytest
 
 from tinyfables.feedback import (
@@ -16,6 +19,31 @@ def test_axes_and_weights_are_the_adr_0003_spec():
     assert AXES == ("moral", "adherence", "coherence", "prose")
     assert WEIGHTS == {"moral": 0.4, "adherence": 0.3, "coherence": 0.2, "prose": 0.1}
     assert abs(sum(WEIGHTS.values()) - 1.0) < 1e-9
+
+
+def test_feedback_weights_have_one_production_source_of_truth():
+    repo = Path(__file__).resolve().parents[1]
+    mapping_hits = []
+    formula_hits = []
+    formula_re = re.compile(
+        r"0\.4\s*\*.*moral.*0\.3\s*\*.*adherence.*0\.2\s*\*.*coherence.*0\.1\s*\*.*prose",
+        re.DOTALL,
+    )
+
+    for path in (repo / "src" / "tinyfables").rglob("*.py"):
+        if path.name == "feedback.py":
+            continue
+        text = path.read_text()
+        if all(
+            fragment in text
+            for fragment in ('"moral": 0.4', '"adherence": 0.3', '"coherence": 0.2', '"prose": 0.1')
+        ):
+            mapping_hits.append(path.relative_to(repo).as_posix())
+        if formula_re.search(text):
+            formula_hits.append(path.relative_to(repo).as_posix())
+
+    assert not mapping_hits
+    assert not formula_hits
 
 
 def test_aggregate_score_is_the_weighted_sum():

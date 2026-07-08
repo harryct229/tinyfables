@@ -1,4 +1,5 @@
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -9,8 +10,10 @@ from tinyfables.labeler import (
     cache_key,
     LabelerError,
     PairLabel,
+    claude_runner,
     build_batch_prompt,
     load_cache,
+    load_label_cohort,
     load_prompt,
     parse_labeler_response,
 )
@@ -128,6 +131,48 @@ def test_parse_rejects_missing_pair():
         parse_labeler_response(body, ["p0", "p1"])
 
 
+def test_parse_rejects_duplicate_pair_id():
+    body = json.dumps(
+        {
+            "labels": [
+                {
+                    "pair_id": "p0",
+                    "fable_a": {"moral": 4, "adherence": 3, "coherence": 4, "prose": 3},
+                    "fable_b": {"moral": 2, "adherence": 2, "coherence": 3, "prose": 3},
+                },
+                {
+                    "pair_id": "p0",
+                    "fable_a": {"moral": 5, "adherence": 5, "coherence": 5, "prose": 5},
+                    "fable_b": {"moral": 1, "adherence": 1, "coherence": 1, "prose": 1},
+                },
+            ]
+        }
+    )
+    with pytest.raises(LabelerError, match="duplicate"):
+        parse_labeler_response(body, ["p0"])
+
+
+def test_parse_rejects_extra_pair():
+    body = json.dumps(
+        {
+            "labels": [
+                {
+                    "pair_id": "p0",
+                    "fable_a": {"moral": 4, "adherence": 3, "coherence": 4, "prose": 3},
+                    "fable_b": {"moral": 2, "adherence": 2, "coherence": 3, "prose": 3},
+                },
+                {
+                    "pair_id": "p1",
+                    "fable_a": {"moral": 4, "adherence": 3, "coherence": 4, "prose": 3},
+                    "fable_b": {"moral": 2, "adherence": 2, "coherence": 3, "prose": 3},
+                },
+            ]
+        }
+    )
+    with pytest.raises(LabelerError, match="extra"):
+        parse_labeler_response(body, ["p0"])
+
+
 def test_parse_rejects_out_of_range_and_non_int():
     for bad in ("6", "0", "3.5", '"4"'):
         body = (
@@ -223,3 +268,44 @@ def test_append_then_load_roundtrips_by_key(tmp_path):
 
 def test_load_cache_missing_file_is_empty(tmp_path):
     assert load_cache(tmp_path / "nope.jsonl") == {}
+
+
+def test_claude_runner_raises_labeler_error_on_nonzero_exit(monkeypatch):
+    def fake_run(*args, **kwargs):
+        return subprocess.CompletedProcess(args=args[0], returncode=2, stdout="", stderr="boom")
+
+    monkeypatch.setattr("tinyfables.labeler.subprocess.run", fake_run)
+
+    with pytest.raises(LabelerError, match="claude -p failed"):
+        claude_runner("prompt", "fake-model")
+
+
+def test_load_label_cohort_rejects_mixed_cache_without_summary(tmp_path):
+    labels = tmp_path / "labels.jsonl"
+    append_cache(
+        labels,
+        {
+            "pair_id": "p0",
+            "phase": "main",
+            "order": "ab",
+            "model_version": "m0",
+            "prompt_version": 1,
+            "ratings_0": {"moral": 5, "adherence": 5, "coherence": 5, "prose": 5},
+            "ratings_1": {"moral": 1, "adherence": 1, "coherence": 1, "prose": 1},
+        },
+    )
+    append_cache(
+        labels,
+        {
+            "pair_id": "p1",
+            "phase": "main",
+            "order": "ab",
+            "model_version": "m1",
+            "prompt_version": 2,
+            "ratings_0": {"moral": 5, "adherence": 5, "coherence": 5, "prose": 5},
+            "ratings_1": {"moral": 1, "adherence": 1, "coherence": 1, "prose": 1},
+        },
+    )
+
+    with pytest.raises(ValueError, match="multiple label cohorts"):
+        load_label_cohort(labels)

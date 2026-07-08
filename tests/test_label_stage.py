@@ -117,6 +117,47 @@ def test_label_resumes_and_skips_cached_work(tmp_path):
     assert len(load_cache(out / "labels.jsonl")) == n_rows
 
 
+def test_label_partial_bounded_run_writes_summary_without_manifest(tmp_path):
+    pairs = tmp_path / "pairs.jsonl"
+    _write_pairs(pairs, 4)
+    out = tmp_path / "labels"
+    runner, calls = _fake_runner_factory()
+
+    label_stage.run(_cfg(pairs, max_batches=1), out, runner=runner)
+
+    assert calls
+    assert (out / "labels.jsonl").exists()
+    assert (out / "label_summary.json").exists()
+    assert not (out / "manifest.json").exists()
+
+    summary = json.loads((out / "label_summary.json").read_text())
+    assert summary["complete"] is False
+    assert summary["n_batches_this_run"] == 1
+    assert summary["n_expected_current"] == len(label_stage.plan_work(label_stage._read_pairs(str(pairs)), _cfg(pairs)))
+    assert summary["n_cached_current"] < summary["n_expected_current"]
+    assert summary["n_pending_current"] > 0
+
+
+def test_label_manifest_ignores_other_cohorts_and_is_removed_when_incomplete(tmp_path):
+    pairs = tmp_path / "pairs.jsonl"
+    _write_pairs(pairs, 4)
+    out = tmp_path / "labels"
+    runner, _ = _fake_runner_factory()
+
+    label_stage.run(_cfg(pairs), out, runner=runner)
+    assert (out / "manifest.json").exists()
+
+    label_stage.run(_cfg(pairs, model="other-model", max_batches=0), out, runner=runner)
+
+    summary = json.loads((out / "label_summary.json").read_text())
+    assert summary["model_version"] == "other-model"
+    assert summary["complete"] is False
+    assert summary["n_cached_current"] == 0
+    assert summary["n_pending_current"] == summary["n_expected_current"]
+    assert summary["n_label_instances"] > 0
+    assert not (out / "manifest.json").exists()
+
+
 def test_label_swap_stores_ratings_in_stable_fable_order(tmp_path):
     pairs = tmp_path / "pairs.jsonl"
     _write_pairs(pairs, 2)

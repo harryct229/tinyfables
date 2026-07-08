@@ -60,8 +60,22 @@ def _store_ratings(item: dict, label) -> tuple[dict, dict]:
 
 
 def _batched(items: list[dict], n: int):
-    for i in range(0, len(items), n):
-        yield items[i : i + n]
+    batch: list[dict] = []
+    batch_ids: set[str] = set()
+    for item in items:
+        pair_id = item["pair_id"]
+        if batch and (len(batch) >= n or pair_id in batch_ids):
+            yield batch
+            batch = []
+            batch_ids = set()
+        batch.append(item)
+        batch_ids.add(pair_id)
+    if batch:
+        yield batch
+
+
+def _expected_key(item: dict, model: str, prompt_version: int) -> tuple:
+    return cache_key(item["pair_id"], item["phase"], item["order"], model, prompt_version)
 
 
 def run(cfg: LabelConfig, out_dir: Path, runner=None) -> None:
@@ -76,13 +90,10 @@ def run(cfg: LabelConfig, out_dir: Path, runner=None) -> None:
 
     pairs = _read_pairs(cfg.pairs)
     work = plan_work(pairs, cfg)
+    expected_keys = {_expected_key(item, cfg.model, prompt_version) for item in work}
     cache = load_cache(cache_path)
-    pending = [
-        item
-        for item in work
-        if cache_key(item["pair_id"], item["phase"], item["order"], cfg.model, prompt_version)
-        not in cache
-    ]
+    cached_current = {key: rec for key, rec in cache.items() if key in expected_keys}
+    pending = [item for item in work if _expected_key(item, cfg.model, prompt_version) not in cached_current]
 
     for rec in cache.values():
         if rec["prompt_version"] == prompt_version and (
@@ -132,22 +143,32 @@ def run(cfg: LabelConfig, out_dir: Path, runner=None) -> None:
         n_batches += 1
 
     final = load_cache(cache_path)
+    final_current = {key: rec for key, rec in final.items() if key in expected_keys}
+    n_pending_current = len(expected_keys) - len(final_current)
+    complete = n_pending_current == 0
     summary = {
         "n_pairs": len(pairs),
         "n_label_instances": len(final),
+        "n_expected_current": len(expected_keys),
+        "n_cached_current": len(final_current),
+        "n_pending_current": n_pending_current,
         "n_batches_this_run": n_batches,
         "model_version": cfg.model,
         "prompt_version": prompt_version,
         "rubric_sha": rubric_sha,
         "prompt_sha": prompt_sha,
-        "complete": len(final) >= len(work),
+        "complete": complete,
     }
     summary_path = out_dir / "label_summary.json"
     summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
-    write_manifest(
-        out_dir,
-        "label",
-        cfg,
-        [cache_path, summary_path],
-        inputs={"pairs.jsonl": Path(cfg.pairs)},
-    )
+    manifest_path = out_dir / "manifest.json"
+    if complete:
+        write_manifest(
+            out_dir,
+            "label",
+            cfg,
+            [cache_path, summary_path],
+            inputs={"pairs.jsonl": Path(cfg.pairs)},
+        )
+    elif manifest_path.exists():
+        manifest_path.unlink()

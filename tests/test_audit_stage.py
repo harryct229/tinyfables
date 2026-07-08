@@ -43,3 +43,13 @@ def test_audit_rejects_missing_labels_path(tmp_path):
     out = tmp_path / "audit"
     with pytest.raises(FileNotFoundError):
         audit_stage.run(AuditConfig(labels=str(tmp_path / "missing.jsonl")), out)
+
+
+def test_audit_rejects_incomplete_label_summary(tmp_path):
+    labels = tmp_path / "labels.jsonl"
+    labels.write_text(Path(LABELS).read_text())
+    (tmp_path / "label_summary.json").write_text(json.dumps({"complete": False}))
+
+    out = tmp_path / "audit"
+    with pytest.raises(ValueError, match="incomplete"):
+        audit_stage.run(AuditConfig(labels=str(labels)), out)

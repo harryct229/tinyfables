@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from tinyfables.config import PairgenConfig, PretrainConfig, PrepConfig, SourceSpec, TokenizerConfig
 from tinyfables.stages import REGISTRY
 from tinyfables.stages import pairgen as pairgen_stage
@@ -57,3 +59,10 @@ def test_pairgen_two_samples_differ_and_are_deterministic(tmp_path):
     pa = (a / "pairs.jsonl").read_text()
     pb = (b / "pairs.jsonl").read_text()
     assert pa == pb
+
+
+def test_pairgen_fails_if_source_has_too_few_canonical_specs(tmp_path):
+    tok, ckpt = _trained_checkpoint(tmp_path)
+    out = tmp_path / "pairs"
+    with pytest.raises(ValueError, match="requested 100 pairs"):
+        pairgen_stage.run(_cfg(tok, ckpt, n_pairs=100), out)

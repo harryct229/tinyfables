@@ -87,6 +87,48 @@ def append_cache(path: str | Path, record: dict) -> None:
         f.write(json.dumps(record) + "\n")
 
 
+def load_label_cohort(path: str | Path) -> tuple[list[dict], dict | None]:
+    """Load one coherent label cohort, using label stage metadata when present."""
+
+    labels_path = Path(path)
+    cache = load_cache(labels_path)
+    records = list(cache.values())
+    summary_path = labels_path.with_name("label_summary.json")
+    manifest_path = labels_path.with_name("manifest.json")
+
+    if summary_path.exists():
+        summary = json.loads(summary_path.read_text())
+        if not summary.get("complete", False):
+            raise ValueError(f"label run is incomplete per {summary_path}")
+        if not manifest_path.exists():
+            raise ValueError(f"complete label run is missing manifest: {manifest_path}")
+
+        model_version = summary.get("model_version")
+        prompt_version = summary.get("prompt_version")
+        filtered = [
+            rec
+            for rec in records
+            if rec.get("model_version") == model_version and rec.get("prompt_version") == prompt_version
+        ]
+        expected = int(summary.get("n_cached_current", len(filtered)))
+        if len(filtered) != expected:
+            raise ValueError(
+                "labels cache does not match the complete label summary cohort: "
+                f"expected {expected} records for ({model_version!r}, {prompt_version!r}), "
+                f"found {len(filtered)}"
+            )
+        return filtered, summary
+
+    cohorts = sorted({(rec["model_version"], rec["prompt_version"]) for rec in records})
+    if len(cohorts) > 1:
+        rendered = ", ".join(f"{model}@v{prompt}" for model, prompt in cohorts)
+        raise ValueError(
+            "labels cache mixes multiple label cohorts without label_summary.json; "
+            f"found: {rendered}"
+        )
+    return records, None
+
+
 def claude_runner(prompt: str, model: str) -> str:
     proc = subprocess.run(
         ["claude", "-p", "--model", model, "--output-format", "text"],
@@ -138,6 +180,7 @@ def parse_labeler_response(text: str, expected_pair_ids: list[str]) -> list[Pair
     if not isinstance(rows, list):
         raise LabelerError("labeler response missing a 'labels' list")
 
+    expected = set(expected_pair_ids)
     by_id: dict[str, dict] = {}
     for row in rows:
         if not isinstance(row, dict) or "pair_id" not in row:
@@ -145,12 +188,25 @@ def parse_labeler_response(text: str, expected_pair_ids: list[str]) -> list[Pair
         pair_id = row["pair_id"]
         if not isinstance(pair_id, str):
             raise LabelerError(f"malformed label row pair_id: {pair_id!r}")
+        if pair_id in by_id:
+            raise LabelerError(f"duplicate label row for pair {pair_id!r}")
         by_id[pair_id] = row
+
+    actual = set(by_id)
+    if actual != expected:
+        missing = sorted(expected - actual)
+        extras = sorted(actual - expected)
+        problems = []
+        if missing:
+            problems.append(f"missing={missing}")
+        if extras:
+            problems.append(f"extra={extras}")
+        raise LabelerError(
+            "labeler response pair ids did not match the requested batch: " + ", ".join(problems)
+        )
 
     labels: list[PairLabel] = []
     for pid in expected_pair_ids:
-        if pid not in by_id:
-            raise LabelerError(f"labeler response missing expected pair {pid!r}")
         row = by_id[pid]
         justification = row.get("justification")
         if "justification" in row and justification is not None and not isinstance(justification, str):

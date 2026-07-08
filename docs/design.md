@@ -314,6 +314,9 @@ steps.
   (0.4/0.3/0.2/0.1); `aggregate_score`, `derive_preference` (ties skipped),
   `weight_sensitivity` (±0.1 table), and the two audit metrics
   (`position_flip_rate`, `self_consistency`).
+- **Single-source boundary.** The production weight mapping and aggregate formula
+  live only in `src/tinyfables/feedback.py`; human-facing mirrors in `RUBRIC.md`
+  and this design doc exist for review and approval, not as a second logic source.
 - **`pairgen` stage.** Mirrors `evaluate`: 2 independent samples (temp 0.9, seeded
   per sample) per val FableSpec under the Canonical Prompt → `pairs.jsonl`;
   `pairgen_summary.json` records the Base Model `checkpoint_sha` so preferences trace

@@ -9,7 +9,7 @@ from pathlib import Path
 
 from tinyfables.config import DeriveConfig
 from tinyfables.feedback import WEIGHTS, aggregate_score, derive_preference, weight_sensitivity
-from tinyfables.labeler import load_cache
+from tinyfables.labeler import load_label_cohort
 from tinyfables.stage import write_manifest
 
 
@@ -23,30 +23,26 @@ def _read_pairs(path: str | Path) -> dict[str, dict]:
     return {row["pair_id"]: row for row in rows}
 
 
-def _canonical_main_labels(cache: dict[tuple, dict]) -> list[dict]:
+def _canonical_main_labels(instances: list[dict]) -> list[dict]:
     canonical: dict[str, dict] = {}
-    for rec in cache.values():
+    for rec in instances:
         if rec["phase"] != "main" or rec["order"] != "ab":
             continue
         pair_id = rec["pair_id"]
-        current = canonical.get(pair_id)
-        if current is None or (
-            rec["prompt_version"],
-            rec["model_version"],
-        ) > (
-            current["prompt_version"],
-            current["model_version"],
-        ):
-            canonical[pair_id] = rec
+        if pair_id in canonical:
+            raise ValueError(f"duplicate canonical main label for pair {pair_id!r}")
+        canonical[pair_id] = rec
     return [canonical[pair_id] for pair_id in sorted(canonical)]
 
 
 def run(cfg: DeriveConfig, out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
-    cache = load_cache(cfg.labels)
+    instances, _summary = load_label_cohort(cfg.labels)
+    if not instances:
+        raise ValueError(f"labels cache is empty: {cfg.labels}")
     pairs = _read_pairs(cfg.pairs)
 
-    mains = _canonical_main_labels(cache)
+    mains = _canonical_main_labels(instances)
 
     preferences = []
     pair_ratings = []

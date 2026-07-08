@@ -1,0 +1,28 @@
+# Labeler prompt (issue 06). Versioned + human-approved alongside RUBRIC.md.
+# `version` is logged as prompt_version on EVERY label (ADR-0004). Bump it whenever
+# this template OR RUBRIC.md changes — the label cache is keyed on prompt_version,
+# so a bump correctly forces re-labeling. {rubric} and {pairs} are str.format slots;
+# all other braces (the JSON schema) are escaped as {{ }}.
+version: 1
+template: |
+  You are a careful, consistent judge of children's moral fables (ages 4-7). Rate
+  each fable strictly against this rubric. Rate each fable on its own merits, not
+  relative to the other fable in its pair.
+
+  RUBRIC:
+  {rubric}
+
+  Below are numbered pairs. For EACH pair, rate BOTH "fable_a" and "fable_b" on all
+  four axes with an integer 1-5: moral, adherence, coherence, prose. Add one short
+  justification sentence per pair.
+
+  Output ONLY a single JSON object, no prose before or after, in exactly this shape:
+  {{"labels": [
+    {{"pair_id": "<id>",
+      "fable_a": {{"moral": 0, "adherence": 0, "coherence": 0, "prose": 0}},
+      "fable_b": {{"moral": 0, "adherence": 0, "coherence": 0, "prose": 0}},
+      "justification": "<one sentence>"}}
+  ]}}
+
+  PAIRS:
+  {pairs}

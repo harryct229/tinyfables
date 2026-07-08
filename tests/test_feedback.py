@@ -1,6 +1,13 @@
 import pytest
 
-from tinyfables.feedback import AXES, WEIGHTS, aggregate_score, derive_preference
+from tinyfables.feedback import (
+    AXES,
+    WEIGHTS,
+    aggregate_score,
+    derive_preference,
+    perturb_weights,
+    weight_sensitivity,
+)
 
 
 def test_axes_and_weights_are_the_adr_0003_spec():
@@ -39,3 +46,36 @@ def test_moral_weight_dominates_a_single_axis_swing():
     a = {"moral": 5, "adherence": 3, "coherence": 3, "prose": 1}
     b = {"moral": 1, "adherence": 3, "coherence": 3, "prose": 5}
     assert derive_preference(a, b) == 0
+
+
+def test_perturb_weights_keeps_sum_one_and_bumps_target():
+    w = perturb_weights(WEIGHTS, "moral", 0.1)
+    assert w["moral"] == pytest.approx(0.5)
+    assert sum(w.values()) == pytest.approx(1.0)
+    assert w["adherence"] == pytest.approx(0.25)
+    assert w["coherence"] == pytest.approx(0.1666667, abs=1e-4)
+    assert w["prose"] == pytest.approx(0.0833333, abs=1e-4)
+
+
+def test_weight_sensitivity_counts_flips_and_excludes_base_ties():
+    robust = (
+        {"moral": 5, "adherence": 5, "coherence": 5, "prose": 5},
+        {"moral": 1, "adherence": 1, "coherence": 1, "prose": 1},
+    )
+    tie = (
+        {"moral": 3, "adherence": 3, "coherence": 3, "prose": 3},
+        {"moral": 3, "adherence": 3, "coherence": 3, "prose": 3},
+    )
+    knife = (
+        {"moral": 3, "adherence": 3, "coherence": 3, "prose": 5},
+        {"moral": 3, "adherence": 3, "coherence": 3, "prose": 4},
+    )
+    out = weight_sensitivity([robust, tie, knife], delta=0.1)
+    assert out["delta"] == 0.1
+    assert out["n_base_preferences"] == 2
+    rows = {(r["axis"], r["direction"]): r for r in out["rows"]}
+    assert len(out["rows"]) == 8
+    prose_down = rows[("prose", "-")]
+    assert prose_down["n_flipped"] == 1
+    assert prose_down["pct_flipped"] == pytest.approx(0.5)
+    assert all(r["n_flipped"] <= 1 for r in out["rows"])

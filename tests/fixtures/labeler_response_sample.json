@@ -4,31 +4,31 @@
       "pair_id": "pair-000000",
       "fable_a": {"moral": 3, "adherence": 3, "coherence": 2, "prose": 2},
       "fable_b": {"moral": 4, "adherence": 3, "coherence": 2, "prose": 2},
-      "justification": "Both preach generosity through a firefly, but A's tangled 'The ___ One' names and abrupt POV shift undercut its moral, while B states the lesson more directly via the owl's advice despite its own repetitive, garbled sentences."
+      "justification": "Fable B explicitly echoes the requested 'generosity quells greed' teaching in its closing line despite narrative contradictions, while Fable A muddles the identity-crisis thread and closes on only a generic friendship moral."
     },
     {
       "pair_id": "pair-000001",
-      "fable_a": {"moral": 3, "adherence": 3, "coherence": 2, "prose": 2},
-      "fable_b": {"moral": 3, "adherence": 3, "coherence": 2, "prose": 2},
-      "justification": "Both orangutan fables build toward accepting differences after a rumor-driven falling out, but each is weakened by contradictory character motivations and an incomplete final sentence, landing at comparable quality."
+      "fable_a": {"moral": 2, "adherence": 3, "coherence": 1, "prose": 2},
+      "fable_b": {"moral": 3, "adherence": 2, "coherence": 2, "prose": 2},
+      "justification": "Both fables cut off mid-sentence before finishing, but Fable A explicitly names the 'second chance' element while Fable B better paraphrases the acceptance-brings-harmony teaching despite a confusing rumor mechanic."
     },
     {
       "pair_id": "pair-000002",
-      "fable_a": {"moral": 3, "adherence": 3, "coherence": 2, "prose": 2},
-      "fable_b": {"moral": 3, "adherence": 4, "coherence": 3, "prose": 3},
-      "justification": "Both center a helpful seal, but B's storm-and-market plot resolves the friendship moral more coherently, while A's singing-mural resolution stays largely nonsensical."
+      "fable_a": {"moral": 2, "adherence": 2, "coherence": 2, "prose": 3},
+      "fable_b": {"moral": 2, "adherence": 2, "coherence": 3, "prose": 3},
+      "justification": "Fable A wrongly sets the story in a 'flying fortress' instead of the requested floating market and never gestures at persistence, while Fable B keeps the correct setting and reads more coherently, though neither delivers the requested memorial-to-the-lost outcome."
     },
     {
       "pair_id": "pair-000003",
-      "fable_a": {"moral": 2, "adherence": 2, "coherence": 1, "prose": 1},
+      "fable_a": {"moral": 3, "adherence": 4, "coherence": 2, "prose": 2},
       "fable_b": {"moral": 3, "adherence": 3, "coherence": 2, "prose": 2},
-      "justification": "A collapses into invented gibberish words and an unexplained book subplot before cutting off mid-sentence, while B keeps a more legible, if still garbled, unity arc around a storm and an Oak Tree."
+      "justification": "Fable A directly states 'the prophecy has been fulfilled,' hitting the requested outcome more squarely than Fable B, though both stories end abruptly and contain garbled phrasing."
     },
     {
       "pair_id": "pair-000004",
-      "fable_a": {"moral": 2, "adherence": 2, "coherence": 1, "prose": 1},
-      "fable_b": {"moral": 3, "adherence": 3, "coherence": 2, "prose": 2},
-      "justification": "A spirals through unexplained new animals (rabbits, mice, raccoons) and broken grammar to an incomplete ending, whereas B sustains a single leopard-fox-owl fairness conflict despite repetition glitches like 'fox and fox and fox'."
+      "fable_a": {"moral": 3, "adherence": 2, "coherence": 2, "prose": 2},
+      "fable_b": {"moral": 4, "adherence": 4, "coherence": 3, "prose": 2},
+      "justification": "Fable B dramatizes the wise-owl-brokered compromise that matches both the showdown outcome and the wise-counsel teaching, while Fable A resolves the conflict off-screen via unexplained new characters and never delivers a real showdown."
     }
   ]
 }

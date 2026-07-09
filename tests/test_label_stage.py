@@ -85,10 +85,10 @@ def test_label_writes_cache_summary_and_manifest(tmp_path):
     cache = load_cache(out / "labels.jsonl")
     for rec in cache.values():
         assert rec["model_version"] == "fake-model"
-        assert rec["prompt_version"] == 1
+        assert rec["prompt_version"] == 2
         assert set(rec["ratings_0"]) == set(AXES)
     for i in range(4):
-        assert cache_key(f"pair-{i:06d}", "main", "ab", "fake-model", 1) in cache
+        assert cache_key(f"pair-{i:06d}", "main", "ab", "fake-model", 2) in cache
 
 
 def test_label_has_swap_slice_and_calibration_passes(tmp_path):
@@ -220,7 +220,7 @@ def test_label_swap_stores_ratings_in_stable_fable_order(tmp_path):
 
     label_stage.run(_cfg(pairs, swap_fraction=1.0, calibration_size=0), out, runner=runner)
     cache = load_cache(out / "labels.jsonl")
-    main = cache[cache_key("pair-000000", "main", "ab", "fake-model", 1)]
-    swap = cache[cache_key("pair-000000", "swap", "ba", "fake-model", 1)]
+    main = cache[cache_key("pair-000000", "main", "ab", "fake-model", 2)]
+    swap = cache[cache_key("pair-000000", "swap", "ba", "fake-model", 2)]
     assert main["ratings_0"]["moral"] == 5 and main["ratings_1"]["moral"] == 1
     assert swap["ratings_0"]["moral"] == 1 and swap["ratings_1"]["moral"] == 5

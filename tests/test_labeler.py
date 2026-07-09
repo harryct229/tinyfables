@@ -49,24 +49,42 @@ def test_labeler_prompt_is_versioned_and_slotted():
 
 def test_load_prompt_returns_version_and_template():
     version, template = load_prompt(REPO / "configs" / "labeler_prompt.yaml")
-    assert version == 1
+    assert version == 2
     assert "{rubric}" not in build_batch_prompt(
         "RUBRIC",
         template,
-        [{"pair_id": "pair-0", "fable_a": "A", "fable_b": "B"}],
+        [
+            {
+                "pair_id": "pair-0",
+                "requested_prompt": "REQUEST",
+                "fable_a": "A",
+                "fable_b": "B",
+            }
+        ],
     )
 
 
 def test_build_batch_prompt_embeds_rubric_and_every_pair():
     _, template = load_prompt(REPO / "configs" / "labeler_prompt.yaml")
     batch = [
-        {"pair_id": "pair-000001", "fable_a": "the fox ran", "fable_b": "the owl slept"},
-        {"pair_id": "pair-000002", "fable_a": "a {brace} value", "fable_b": "b"},
+        {
+            "pair_id": "pair-000001",
+            "requested_prompt": "Write about a fox",
+            "fable_a": "the fox ran",
+            "fable_b": "the owl slept",
+        },
+        {
+            "pair_id": "pair-000002",
+            "requested_prompt": "Write about an owl",
+            "fable_a": "a {brace} value",
+            "fable_b": "b",
+        },
     ]
     prompt = build_batch_prompt("MY RUBRIC BODY", template, batch)
     assert "MY RUBRIC BODY" in prompt
     for row in batch:
         assert row["pair_id"] in prompt
+        assert row["requested_prompt"] in prompt
         assert row["fable_a"] in prompt and row["fable_b"] in prompt
     assert "a {brace} value" in prompt
 

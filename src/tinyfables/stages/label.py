@@ -31,6 +31,7 @@ def plan_work(pairs: list[dict], cfg: LabelConfig) -> list[dict]:
             "pair_id": pair["pair_id"],
             "phase": phase,
             "order": order,
+            "prompt": pair["prompt"],
             "fables": pair["fables"],
         }
 
@@ -83,6 +84,7 @@ def _label_batch(batch: list[dict], rubric_text: str, template: str, model: str,
     prompt_batch = [
         {
             "pair_id": item["pair_id"],
+            "requested_prompt": item["prompt"],
             "fable_a": item["fables"][0] if item["order"] == "ab" else item["fables"][1],
             "fable_b": item["fables"][1] if item["order"] == "ab" else item["fables"][0],
         }

@@ -3,7 +3,7 @@
 # this template OR RUBRIC.md changes — the label cache is keyed on prompt_version,
 # so a bump correctly forces re-labeling. {rubric} and {pairs} are str.format slots;
 # all other braces (the JSON schema) are escaped as {{ }}.
-version: 1
+version: 2
 template: |
   You are a careful, consistent judge of children's moral fables (ages 4-7). Rate
   each fable strictly against this rubric. Rate each fable on its own merits, not

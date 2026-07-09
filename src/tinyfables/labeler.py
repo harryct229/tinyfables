@@ -42,6 +42,7 @@ def build_batch_prompt(rubric_text: str, template_text: str, batch: list[dict]) 
     for i, row in enumerate(batch, 1):
         blocks.append(
             f"[{i}] pair_id: {row['pair_id']}\n"
+            f"--- Requested Fable ---\n{row['requested_prompt']}\n"
             f"--- Fable A ---\n{row['fable_a']}\n"
             f"--- Fable B ---\n{row['fable_b']}\n"
         )

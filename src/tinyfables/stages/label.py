@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import random
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from tinyfables.config import LabelConfig
@@ -78,6 +79,23 @@ def _expected_key(item: dict, model: str, prompt_version: int) -> tuple:
     return cache_key(item["pair_id"], item["phase"], item["order"], model, prompt_version)
 
 
+def _label_batch(batch: list[dict], rubric_text: str, template: str, model: str, runner):
+    prompt_batch = [
+        {
+            "pair_id": item["pair_id"],
+            "fable_a": item["fables"][0] if item["order"] == "ab" else item["fables"][1],
+            "fable_b": item["fables"][1] if item["order"] == "ab" else item["fables"][0],
+        }
+        for item in batch
+    ]
+    prompt = build_batch_prompt(rubric_text, template, prompt_batch)
+    response = runner(prompt, model)
+    return {
+        label.pair_id: label
+        for label in parse_labeler_response(response, [item["pair_id"] for item in batch])
+    }
+
+
 def run(cfg: LabelConfig, out_dir: Path, runner=None) -> None:
     runner = runner or claude_runner
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -104,43 +122,38 @@ def run(cfg: LabelConfig, out_dir: Path, runner=None) -> None:
                 "bump `version` in labeler_prompt.yaml before re-labeling (RUBRIC/prompt changed)."
             )
 
+    batches = list(_batched(pending, cfg.batch_size))
+    if cfg.max_batches is not None:
+        batches = batches[: cfg.max_batches]
+
+    def label_batch(batch):
+        return _label_batch(batch, rubric_text, template, cfg.model, runner)
+
     n_batches = 0
-    for batch in _batched(pending, cfg.batch_size):
-        if cfg.max_batches is not None and n_batches >= cfg.max_batches:
-            break
-        prompt_batch = [
-            {
-                "pair_id": item["pair_id"],
-                "fable_a": item["fables"][0] if item["order"] == "ab" else item["fables"][1],
-                "fable_b": item["fables"][1] if item["order"] == "ab" else item["fables"][0],
-            }
-            for item in batch
-        ]
-        prompt = build_batch_prompt(rubric_text, template, prompt_batch)
-        response = runner(prompt, cfg.model)
-        labels = {
-            label.pair_id: label
-            for label in parse_labeler_response(response, [item["pair_id"] for item in batch])
-        }
-        for item in batch:
-            label = labels[item["pair_id"]]
-            ratings_0, ratings_1 = _store_ratings(item, label)
-            append_cache(
-                cache_path,
-                {
-                    "pair_id": item["pair_id"],
-                    "phase": item["phase"],
-                    "order": item["order"],
-                    "model_version": cfg.model,
-                    "prompt_version": prompt_version,
-                    "rubric_sha": rubric_sha,
-                    "prompt_sha": prompt_sha,
-                    "ratings_0": ratings_0,
-                    "ratings_1": ratings_1,
-                    "justification": label.justification,
-                },
-            )
-        n_batches += 1
+    with ThreadPoolExecutor(max_workers=cfg.workers) as executor:
+        for start in range(0, len(batches), cfg.workers):
+            wave = batches[start : start + cfg.workers]
+            results = executor.map(label_batch, wave)
+            for batch, labels in zip(wave, results):
+                for item in batch:
+                    label = labels[item["pair_id"]]
+                    ratings_0, ratings_1 = _store_ratings(item, label)
+                    append_cache(
+                        cache_path,
+                        {
+                            "pair_id": item["pair_id"],
+                            "phase": item["phase"],
+                            "order": item["order"],
+                            "model_version": cfg.model,
+                            "prompt_version": prompt_version,
+                            "rubric_sha": rubric_sha,
+                            "prompt_sha": prompt_sha,
+                            "ratings_0": ratings_0,
+                            "ratings_1": ratings_1,
+                            "justification": label.justification,
+                        },
+                    )
+                n_batches += 1
 
     final = load_cache(cache_path)
     final_current = {key: rec for key, rec in final.items() if key in expected_keys}

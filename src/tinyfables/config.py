@@ -138,12 +138,15 @@ class LabelConfig:
     calibration_size: int = 30
     seed: int = 0
     max_batches: int | None = None
+    workers: int = 1
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.swap_fraction <= 1.0:
             raise ValueError("swap_fraction must be in [0, 1]")
         if self.batch_size <= 0:
             raise ValueError("batch_size must be positive")
+        if self.workers <= 0:
+            raise ValueError("workers must be positive")
 
 
 @dataclass(frozen=True)

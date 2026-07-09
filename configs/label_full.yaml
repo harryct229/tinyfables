@@ -5,7 +5,8 @@ pairs: runs/pairgen_base/pairs.jsonl
 rubric: RUBRIC.md
 labeler_prompt: configs/labeler_prompt.yaml
 model: claude-sonnet-5
-batch_size: 5
+batch_size: 10
+workers: 4
 swap_fraction: 0.10
 calibration_size: 30
 seed: 0

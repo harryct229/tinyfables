@@ -64,7 +64,8 @@ def test_label_full_uses_rubric_and_versioned_prompt():
     assert cfg.rubric == "RUBRIC.md"
     assert cfg.labeler_prompt == "configs/labeler_prompt.yaml"
     assert cfg.model == "claude-sonnet-5"
-    assert cfg.batch_size == 5
+    assert cfg.batch_size == 10
+    assert cfg.workers == 4
     assert cfg.swap_fraction == 0.10
     assert cfg.calibration_size == 30
     assert cfg.seed == 0

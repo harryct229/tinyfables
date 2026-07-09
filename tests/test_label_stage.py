@@ -1,4 +1,6 @@
 import json
+import threading
+import time
 from pathlib import Path
 
 from tinyfables.config import LabelConfig
@@ -136,6 +138,51 @@ def test_label_partial_bounded_run_writes_summary_without_manifest(tmp_path):
     assert summary["n_expected_current"] == len(label_stage.plan_work(label_stage._read_pairs(str(pairs)), _cfg(pairs)))
     assert summary["n_cached_current"] < summary["n_expected_current"]
     assert summary["n_pending_current"] > 0
+
+
+def test_label_runs_batches_concurrently_but_writes_cache_in_work_order(tmp_path):
+    pairs = tmp_path / "pairs.jsonl"
+    _write_pairs(pairs, 6)
+    out = tmp_path / "labels"
+    lock = threading.Lock()
+    active = 0
+    max_active = 0
+
+    def runner(prompt, model):
+        nonlocal active, max_active
+        ids = [ln.split("pair_id: ")[1].strip() for ln in prompt.splitlines() if "pair_id: " in ln]
+        with lock:
+            active += 1
+            max_active = max(max_active, active)
+        time.sleep(0.05)
+        with lock:
+            active -= 1
+        ratings = {axis: 3 for axis in AXES}
+        return json.dumps(
+            {
+                "labels": [
+                    {"pair_id": pair_id, "fable_a": ratings, "fable_b": ratings}
+                    for pair_id in ids
+                ]
+            }
+        )
+
+    cfg = _cfg(
+        pairs,
+        batch_size=2,
+        calibration_size=0,
+        swap_fraction=0,
+        max_batches=3,
+        workers=3,
+    )
+    label_stage.run(cfg, out, runner=runner)
+
+    assert max_active == 3
+    rows = [json.loads(line) for line in (out / "labels.jsonl").read_text().splitlines()]
+    expected = label_stage.plan_work(label_stage._read_pairs(str(pairs)), cfg)[:6]
+    assert [(row["pair_id"], row["phase"]) for row in rows] == [
+        (item["pair_id"], item["phase"]) for item in expected
+    ]
 
 
 def test_label_manifest_ignores_other_cohorts_and_is_removed_when_incomplete(tmp_path):

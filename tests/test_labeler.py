@@ -298,6 +298,21 @@ def test_claude_runner_raises_labeler_error_on_nonzero_exit(monkeypatch):
         claude_runner("prompt", "fake-model")
 
 
+def test_claude_runner_reports_stdout_when_stderr_is_empty(monkeypatch):
+    def fake_run(*args, **kwargs):
+        return subprocess.CompletedProcess(
+            args=args[0],
+            returncode=1,
+            stdout="session limit reached",
+            stderr="",
+        )
+
+    monkeypatch.setattr("tinyfables.labeler.subprocess.run", fake_run)
+
+    with pytest.raises(LabelerError, match="session limit reached"):
+        claude_runner("prompt", "fake-model")
+
+
 def test_load_label_cohort_rejects_mixed_cache_without_summary(tmp_path):
     labels = tmp_path / "labels.jsonl"
     append_cache(

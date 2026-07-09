@@ -139,10 +139,10 @@ def claude_runner(prompt: str, model: str) -> str:
         timeout=600,
     )
     if proc.returncode != 0:
-        stderr = proc.stderr.strip()
-        if len(stderr) > 500:
-            stderr = stderr[:500]
-        raise LabelerError(f"claude -p failed (exit {proc.returncode}): {stderr}")
+        detail = proc.stderr.strip() or proc.stdout.strip() or "no diagnostic output"
+        if len(detail) > 500:
+            detail = detail[:500]
+        raise LabelerError(f"claude -p failed (exit {proc.returncode}): {detail}")
     return proc.stdout
 
 

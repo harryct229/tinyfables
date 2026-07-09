@@ -63,7 +63,7 @@ def test_label_full_uses_rubric_and_versioned_prompt():
     assert cfg.pairs == "runs/pairgen_base/pairs.jsonl"
     assert cfg.rubric == "RUBRIC.md"
     assert cfg.labeler_prompt == "configs/labeler_prompt.yaml"
-    assert cfg.model == "claude-opus-4-8"
+    assert cfg.model == "claude-sonnet-5"
     assert cfg.batch_size == 5
     assert cfg.swap_fraction == 0.10
     assert cfg.calibration_size == 30

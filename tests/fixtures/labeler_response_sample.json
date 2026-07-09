@@ -2,15 +2,33 @@
   "labels": [
     {
       "pair_id": "pair-000000",
-      "fable_a": {"moral": 5, "adherence": 4, "coherence": 4, "prose": 4},
-      "fable_b": {"moral": 3, "adherence": 4, "coherence": 3, "prose": 4},
-      "justification": "A states and dramatizes the requested moral; B only implies it."
+      "fable_a": {"moral": 3, "adherence": 3, "coherence": 2, "prose": 2},
+      "fable_b": {"moral": 4, "adherence": 3, "coherence": 2, "prose": 2},
+      "justification": "Both preach generosity through a firefly, but A's tangled 'The ___ One' names and abrupt POV shift undercut its moral, while B states the lesson more directly via the owl's advice despite its own repetitive, garbled sentences."
     },
     {
       "pair_id": "pair-000001",
-      "fable_a": {"moral": 2, "adherence": 3, "coherence": 3, "prose": 3},
-      "fable_b": {"moral": 4, "adherence": 4, "coherence": 4, "prose": 4},
-      "justification": "B follows the spec and ends on a clear lesson; A drifts from the outcome."
+      "fable_a": {"moral": 3, "adherence": 3, "coherence": 2, "prose": 2},
+      "fable_b": {"moral": 3, "adherence": 3, "coherence": 2, "prose": 2},
+      "justification": "Both orangutan fables build toward accepting differences after a rumor-driven falling out, but each is weakened by contradictory character motivations and an incomplete final sentence, landing at comparable quality."
+    },
+    {
+      "pair_id": "pair-000002",
+      "fable_a": {"moral": 3, "adherence": 3, "coherence": 2, "prose": 2},
+      "fable_b": {"moral": 3, "adherence": 4, "coherence": 3, "prose": 3},
+      "justification": "Both center a helpful seal, but B's storm-and-market plot resolves the friendship moral more coherently, while A's singing-mural resolution stays largely nonsensical."
+    },
+    {
+      "pair_id": "pair-000003",
+      "fable_a": {"moral": 2, "adherence": 2, "coherence": 1, "prose": 1},
+      "fable_b": {"moral": 3, "adherence": 3, "coherence": 2, "prose": 2},
+      "justification": "A collapses into invented gibberish words and an unexplained book subplot before cutting off mid-sentence, while B keeps a more legible, if still garbled, unity arc around a storm and an Oak Tree."
+    },
+    {
+      "pair_id": "pair-000004",
+      "fable_a": {"moral": 2, "adherence": 2, "coherence": 1, "prose": 1},
+      "fable_b": {"moral": 3, "adherence": 3, "coherence": 2, "prose": 2},
+      "justification": "A spirals through unexplained new animals (rabbits, mice, raccoons) and broken grammar to an incomplete ending, whereas B sustains a single leopard-fox-owl fairness conflict despite repetition glitches like 'fox and fox and fox'."
     }
   ]
 }

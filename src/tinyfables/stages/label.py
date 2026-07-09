@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import random
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -14,6 +15,7 @@ from tinyfables.labeler import (
     build_batch_prompt,
     cache_key,
     claude_runner,
+    LabelerError,
     load_cache,
     load_prompt,
     parse_labeler_response,
@@ -80,7 +82,15 @@ def _expected_key(item: dict, model: str, prompt_version: int) -> tuple:
     return cache_key(item["pair_id"], item["phase"], item["order"], model, prompt_version)
 
 
-def _label_batch(batch: list[dict], rubric_text: str, template: str, model: str, runner):
+def _label_batch(
+    batch: list[dict],
+    rubric_text: str,
+    template: str,
+    model: str,
+    runner,
+    retry_attempts: int,
+    retry_delay_seconds: float,
+):
     prompt_batch = [
         {
             "pair_id": item["pair_id"],
@@ -91,11 +101,19 @@ def _label_batch(batch: list[dict], rubric_text: str, template: str, model: str,
         for item in batch
     ]
     prompt = build_batch_prompt(rubric_text, template, prompt_batch)
-    response = runner(prompt, model)
-    return {
-        label.pair_id: label
-        for label in parse_labeler_response(response, [item["pair_id"] for item in batch])
-    }
+    expected_ids = [item["pair_id"] for item in batch]
+    for attempt in range(retry_attempts):
+        try:
+            response = runner(prompt, model)
+            return {
+                label.pair_id: label
+                for label in parse_labeler_response(response, expected_ids)
+            }
+        except LabelerError:
+            if attempt + 1 >= retry_attempts:
+                raise
+            time.sleep(retry_delay_seconds * (attempt + 1))
+    raise AssertionError("unreachable")
 
 
 def run(cfg: LabelConfig, out_dir: Path, runner=None) -> None:
@@ -129,7 +147,15 @@ def run(cfg: LabelConfig, out_dir: Path, runner=None) -> None:
         batches = batches[: cfg.max_batches]
 
     def label_batch(batch):
-        return _label_batch(batch, rubric_text, template, cfg.model, runner)
+        return _label_batch(
+            batch,
+            rubric_text,
+            template,
+            cfg.model,
+            runner,
+            cfg.retry_attempts,
+            cfg.retry_delay_seconds,
+        )
 
     n_batches = 0
     with ThreadPoolExecutor(max_workers=cfg.workers) as executor:

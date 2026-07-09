@@ -185,6 +185,40 @@ def test_label_runs_batches_concurrently_but_writes_cache_in_work_order(tmp_path
     ]
 
 
+def test_label_retries_transient_runner_failure(tmp_path):
+    pairs = tmp_path / "pairs.jsonl"
+    _write_pairs(pairs, 2)
+    out = tmp_path / "labels"
+    good_runner, calls = _fake_runner_factory()
+    attempts = 0
+
+    def flaky_runner(prompt, model):
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            from tinyfables.labeler import LabelerError
+
+            raise LabelerError("transient")
+        return good_runner(prompt, model)
+
+    label_stage.run(
+        _cfg(
+            pairs,
+            calibration_size=0,
+            swap_fraction=0,
+            max_batches=1,
+            retry_attempts=2,
+            retry_delay_seconds=0,
+        ),
+        out,
+        runner=flaky_runner,
+    )
+
+    assert attempts == 2
+    assert len(calls) == 1
+    assert len(load_cache(out / "labels.jsonl")) == 2
+
+
 def test_label_manifest_ignores_other_cohorts_and_is_removed_when_incomplete(tmp_path):
     pairs = tmp_path / "pairs.jsonl"
     _write_pairs(pairs, 4)

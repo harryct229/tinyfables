@@ -139,6 +139,8 @@ class LabelConfig:
     seed: int = 0
     max_batches: int | None = None
     workers: int = 1
+    retry_attempts: int = 3
+    retry_delay_seconds: float = 10.0
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.swap_fraction <= 1.0:
@@ -147,6 +149,10 @@ class LabelConfig:
             raise ValueError("batch_size must be positive")
         if self.workers <= 0:
             raise ValueError("workers must be positive")
+        if self.retry_attempts <= 0:
+            raise ValueError("retry_attempts must be positive")
+        if self.retry_delay_seconds < 0:
+            raise ValueError("retry_delay_seconds must be non-negative")
 
 
 @dataclass(frozen=True)

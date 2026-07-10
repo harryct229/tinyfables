@@ -276,6 +276,47 @@ class MarginsConfig:
             raise ValueError("bucket_edges must be positive and ascending")
 
 
+@dataclass(frozen=True)
+class PPOStageConfig:
+    gate: str                     # path to gate.json — MUST pass assert_gate_passed
+    preferences: str              # prompts come from the train split; probes from held_out
+    base_checkpoint: str
+    reward_model_dir: str
+    tokenizer_dir: str
+    adr_decision: str             # e.g. "ADR-0005a" — echoed into summary + manifest config
+    n_ctx: int = 1024
+    response_length: int = 320
+    total_episodes: int = 2000
+    batch_size: int = 8           # per-device
+    gradient_accumulation_steps: int = 2
+    local_rollout_forward_batch_size: int = 8
+    num_ppo_epochs: int = 4
+    num_mini_batches: int = 1
+    kl_coef: float = 0.2          # strong KL anchor (design: Feedback stage)
+    lr: float = 3e-6
+    temperature: float = 0.9      # matches pairgen sampling
+    missing_eos_penalty: float | None = 1.0
+    whiten_rewards: bool = False
+    n_probe_prompts: int = 8
+    length_alarm_threshold: float = 0.25
+    seed: int = 0
+    device: str = "auto"          # "cpu" forces use_cpu=True for toy tests
+    fp16: bool = False
+
+    def __post_init__(self) -> None:
+        for name in ("n_ctx", "response_length", "total_episodes", "batch_size",
+                     "gradient_accumulation_steps", "local_rollout_forward_batch_size",
+                     "num_ppo_epochs", "num_mini_batches", "n_probe_prompts"):
+            if getattr(self, name) <= 0:
+                raise ValueError(f"{name} must be positive")
+        if self.lr <= 0 or self.temperature <= 0:
+            raise ValueError("lr and temperature must be positive")
+        if not 0.0 < self.length_alarm_threshold:
+            raise ValueError("length_alarm_threshold must be positive")
+        if not self.adr_decision:
+            raise ValueError("adr_decision is required on the Aligned Model manifest")
+
+
 def _build(cls: type[T], data: Any) -> T:
     if not isinstance(data, dict):
         raise TypeError(f"expected a mapping for {cls.__name__}, got {type(data).__name__}")

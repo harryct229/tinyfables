@@ -120,3 +120,34 @@ def test_margins_full_config_loads():
     assert cfg.bucket_edges == [0.1, 0.3, 0.6, 1.0]
     assert cfg.device == "auto"
     assert cfg.seed == 0
+
+
+def test_ppo_full_config_loads():
+    from tinyfables.config import PPOStageConfig
+
+    # adr_decision is deliberately "SET-ME-AT-FORK" (ADR-0005 is decided later);
+    # this test only asserts the config loads and the gate path is the honest,
+    # currently-NO-GO record — not that PPO would actually be allowed to run today.
+    cfg = load_config(REPO / "configs" / "ppo_full.yaml", PPOStageConfig)
+    assert cfg.gate == "runs/gate_base/gate.json"
+    assert cfg.preferences == "runs/derive_base/preferences.jsonl"
+    assert cfg.base_checkpoint == "runs/base_model"
+    assert cfg.reward_model_dir == "runs/rm_hub"
+    assert cfg.tokenizer_dir == "runs/tokenizer_full"
+    assert cfg.adr_decision == "SET-ME-AT-FORK"
+    assert cfg.n_ctx == 1024
+    assert cfg.response_length == 320
+    assert cfg.total_episodes == 2000
+    assert cfg.batch_size == 8
+    assert cfg.gradient_accumulation_steps == 2
+    assert cfg.local_rollout_forward_batch_size == 8
+    assert cfg.num_ppo_epochs == 4
+    assert cfg.kl_coef == 0.2
+    assert cfg.lr == 3.0e-6
+    assert cfg.temperature == 0.9
+    assert cfg.missing_eos_penalty == 1.0
+    assert cfg.n_probe_prompts == 8
+    assert cfg.length_alarm_threshold == 0.25
+    assert cfg.seed == 0
+    assert cfg.device == "auto"
+    assert cfg.fp16 is True

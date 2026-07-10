@@ -16,6 +16,7 @@ from tinyfables.config import (
     PrepConfig,
     PretrainConfig,
     RewardTrainConfig,
+    SamplesConfig,
     TokenizerConfig,
 )
 
@@ -34,4 +35,5 @@ REGISTRY: dict[str, tuple[type, str]] = {
     "gate": (GateConfig, "tinyfables.stages.gate"),
     "ppo": (PPOStageConfig, "tinyfables.stages.ppo"),
     "dpo": (DPOStageConfig, "tinyfables.stages.dpo"),
+    "samples": (SamplesConfig, "tinyfables.stages.samples"),
 }

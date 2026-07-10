@@ -153,6 +153,24 @@ def test_ppo_full_config_loads():
     assert cfg.fp16 is True
 
 
+def test_samples_full_config_loads():
+    from tinyfables.config import SamplesConfig
+
+    cfg = load_config(REPO / "configs" / "samples_full.yaml", SamplesConfig)
+    assert cfg.base_checkpoint == "runs/base_model"
+    assert cfg.aligned_checkpoint == "runs/aligned_model"
+    assert cfg.tokenizer_dir == "runs/tokenizer_full"
+    assert cfg.source.hf_dataset == "klusai/ds-tf1-en-3m"
+    assert cfg.source.hf_split == "validation"
+    assert cfg.n_specs == 20
+    assert cfg.max_new_tokens == 320
+    assert cfg.min_new_tokens == 80
+    assert cfg.temperature == 0.9
+    assert cfg.top_k == 50
+    assert cfg.seed == 0
+    assert cfg.device == "auto"
+
+
 def test_dpo_full_config_loads():
     from tinyfables.config import DPOStageConfig
 

@@ -356,6 +356,25 @@ class DPOStageConfig:
             raise ValueError("adr_decision is required on the Aligned Model manifest")
 
 
+@dataclass(frozen=True)
+class SamplesConfig:
+    base_checkpoint: str
+    aligned_checkpoint: str
+    tokenizer_dir: str
+    source: SourceSpec
+    n_specs: int = 20
+    max_new_tokens: int = 320
+    min_new_tokens: int = 80
+    temperature: float = 0.9
+    top_k: int = 50
+    seed: int = 0
+    device: str = "auto"
+
+    def __post_init__(self) -> None:
+        if self.n_specs <= 0:
+            raise ValueError("n_specs must be positive")
+
+
 def _build(cls: type[T], data: Any) -> T:
     if not isinstance(data, dict):
         raise TypeError(f"expected a mapping for {cls.__name__}, got {type(data).__name__}")

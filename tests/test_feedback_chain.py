@@ -112,3 +112,79 @@ def test_feedback_path_composes_offline(tmp_path):
     assert (labels_dir / "labels.jsonl").exists()
     assert (derive_dir / "preferences.jsonl").exists()
     assert json.loads((audit_dir / "audit.json").read_text())["self_consistency"]["n_pairs"] == 2
+
+
+def test_issue07_reward_and_gate_toy_chain(tmp_path):
+    import json
+    import torch
+    from tokenizers import Tokenizer
+
+    from tinyfables.config import GateConfig, RewardTrainConfig, SourceSpec, TokenizerConfig
+    from tinyfables.model import GPT, GPTConfig
+    from tinyfables.stages import gate as gate_stage
+    from tinyfables.stages import reward as reward_stage
+    from tinyfables.stages import tokenizer as tokenizer_stage
+
+    fix = Path(__file__).parent / "fixtures"
+    tok_dir = tmp_path / "tok"
+    tokenizer_stage.run(
+        TokenizerConfig(source=SourceSpec(jsonl_path=str(fix / "tiny_corpus.jsonl")), vocab_size=512, seed=0),
+        tok_dir,
+    )
+    tok = Tokenizer.from_file(str(tok_dir / "tokenizer.json"))
+    base = tmp_path / "base"
+    torch.manual_seed(0)
+    GPT(
+        GPTConfig(
+            vocab_size=tok.get_vocab_size(),
+            n_layer=1,
+            n_head=2,
+            d_model=32,
+            n_ctx=128,
+        )
+    ).save_pretrained(base)
+
+    reward_out = tmp_path / "reward"
+    reward_stage.run(
+        RewardTrainConfig(
+            preferences=str(fix / "preferences_replay.jsonl"),
+            base_checkpoint=str(base),
+            tokenizer_dir=str(tok_dir),
+            n_ctx=128,
+            batch_size=2,
+            steps=4,
+            curve_steps=2,
+            lr=1e-3,
+            warmup_steps=0,
+            seed=0,
+            device="cpu",
+            amp=False,
+            log_every=2,
+            curve_sizes=[2],
+        ),
+        reward_out,
+    )
+
+    audit_path = tmp_path / "audit.json"
+    audit_path.write_text(
+        json.dumps(
+            {
+                "gate": {
+                    "self_consistency_gate": 0.85,
+                    "self_consistency_pass": True,
+                    "position_swap_review_flag": False,
+                    "position_swap_review_threshold": 0.5,
+                },
+                "self_consistency": {"mean_agreement": 0.9, "n_pairs": 30, "n_unanimous": 27},
+                "position_swap": {"flip_rate": 0.2, "n_flipped": 40, "n_pairs": 200},
+            }
+        )
+        + "\n"
+    )
+
+    gate_out = tmp_path / "gate"
+    gate_stage.run(
+        GateConfig(audit=str(audit_path), reward_summary=str(reward_out / "reward_summary.json")),
+        gate_out,
+    )
+    assert (gate_out / "gate.json").exists()

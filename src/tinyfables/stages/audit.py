@@ -3,6 +3,13 @@
 Computes the position-swap flip rate and calibration self-consistency over the
 cached labels, then writes the audit JSON, a short markdown report, and the
 manifest last. Torch-free.
+
+ADR-0005 adds an optional majority-vote mode (`extra_labels`): when set, the
+stage loads the primary cache plus additional independently labeled caches
+and computes both audits over the *voted* preference across caches. The
+`audit.json` / `audit_report.md` schema is unchanged either way -- the gate
+stage does not change. `extra_labels` unset (the default) keeps the original
+single-cache behavior byte-identical.
 """
 
 from __future__ import annotations
@@ -11,7 +18,12 @@ import json
 from pathlib import Path
 
 from tinyfables.config import AuditConfig
-from tinyfables.feedback import position_flip_rate, self_consistency
+from tinyfables.feedback import (
+    position_flip_rate,
+    self_consistency,
+    voted_position_flip_rate,
+    voted_self_consistency,
+)
 from tinyfables.labeler import load_label_cohort
 from tinyfables.stage import write_manifest
 
@@ -26,8 +38,26 @@ def run(cfg: AuditConfig, out_dir: Path) -> None:
     if not instances:
         raise ValueError(f"labels cache is empty: {labels_path}")
 
-    swap = position_flip_rate(instances)
-    consistency = self_consistency(instances)
+    inputs = {"labels.jsonl": labels_path}
+
+    if cfg.extra_labels is None:
+        swap = position_flip_rate(instances)
+        consistency = self_consistency(instances)
+    else:
+        instances_by_cache = [instances]
+        for i, path in enumerate(cfg.extra_labels):
+            extra_path = Path(path)
+            if not extra_path.exists():
+                raise FileNotFoundError(f"labels cache not found: {extra_path}")
+            extra_instances, _extra_summary = load_label_cohort(extra_path)
+            if not extra_instances:
+                raise ValueError(f"labels cache is empty: {extra_path}")
+            instances_by_cache.append(extra_instances)
+            inputs[f"labels_extra_{i}.jsonl"] = extra_path
+
+        swap = voted_position_flip_rate(instances_by_cache)
+        consistency = voted_self_consistency(instances_by_cache)
+
     passed = consistency["mean_agreement"] >= cfg.self_consistency_gate
     review_flag = swap["n_pairs"] > 0 and swap["flip_rate"] >= cfg.position_swap_review_threshold
 
@@ -71,5 +101,5 @@ def run(cfg: AuditConfig, out_dir: Path) -> None:
         "audit",
         cfg,
         [audit_path, report_path],
-        inputs={"labels.jsonl": Path(cfg.labels)},
+        inputs=inputs,
     )

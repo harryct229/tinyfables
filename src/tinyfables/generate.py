@@ -19,7 +19,7 @@ def encode_prompt(tokenizer, request) -> list[int]:
     return tokenizer.encode(text).ids
 
 
-def generate_fable(
+def generate_fable_ids(
     model,
     tokenizer,
     request,
@@ -31,7 +31,7 @@ def generate_fable(
     do_sample: bool = False,
     seed: int | None = None,
     device=None,
-) -> str:
+) -> tuple[str, list[int]]:
     device = device or next(model.parameters()).device
     prompt_ids = encode_prompt(tokenizer, request)
     eot_id = tokenizer.token_to_id(EOT)
@@ -60,4 +60,31 @@ def generate_fable(
     new_ids = out[0, len(prompt_ids):].tolist()
     if eot_id in new_ids:
         new_ids = new_ids[: new_ids.index(eot_id)]
-    return tokenizer.decode(new_ids)
+    return tokenizer.decode(new_ids), new_ids
+
+
+def generate_fable(
+    model,
+    tokenizer,
+    request,
+    *,
+    max_new_tokens: int = 256,
+    min_new_tokens: int = 0,
+    temperature: float = 1.0,
+    top_k: int | None = None,
+    do_sample: bool = False,
+    seed: int | None = None,
+    device=None,
+) -> str:
+    return generate_fable_ids(
+        model,
+        tokenizer,
+        request,
+        max_new_tokens=max_new_tokens,
+        min_new_tokens=min_new_tokens,
+        temperature=temperature,
+        top_k=top_k,
+        do_sample=do_sample,
+        seed=seed,
+        device=device,
+    )[0]

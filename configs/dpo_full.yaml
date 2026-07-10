@@ -1,0 +1,19 @@
+preferences: runs/derive_base/preferences.jsonl
+base_checkpoint: runs/base_model
+tokenizer_dir: runs/tokenizer_full
+adr_decision: ADR-0005b
+n_ctx: 1024
+beta: 0.1
+lr: 5.0e-6
+num_train_epochs: 3.0
+batch_size: 8
+gradient_accumulation_steps: 2
+min_margin: 0.0                     # margin-filtered variant: bump and rerun
+logging_steps: 10
+n_probe_prompts: 8
+probe_max_new_tokens: 320
+temperature: 0.9
+length_alarm_threshold: 0.25
+seed: 0
+device: auto
+fp16: true

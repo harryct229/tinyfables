@@ -57,7 +57,7 @@ class CausalSelfAttention(nn.Module):
         self.c_proj = nn.Linear(config.d_model, config.d_model)
         self.c_proj.RESIDUAL = True  # scaled-down init (see GPT._init_weights)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, attention_mask: torch.Tensor | None = None) -> torch.Tensor:
         B, T, C = x.shape
         q, k, v = self.c_attn(x).split(self.d_model, dim=2)
         hs = C // self.n_head
@@ -73,6 +73,11 @@ class CausalSelfAttention(nn.Module):
             torch.ones(T, T, dtype=torch.bool, device=x.device), diagonal=1
         )
         att = att.masked_fill(future, float("-inf"))
+        if attention_mask is not None:
+            # Key-padding mask (TRL batches are padded). finfo.min, not -inf: a
+            # pad-query row has every key masked, and all--inf would softmax to NaN.
+            pad_keys = ~attention_mask[:, None, None, :].to(torch.bool)
+            att = att.masked_fill(pad_keys, torch.finfo(att.dtype).min)
         att = F.softmax(att, dim=-1)
         y = att @ v  # (B, nh, T, hs)
         y = y.transpose(1, 2).contiguous().view(B, T, C)
@@ -99,8 +104,8 @@ class Block(nn.Module):
         self.ln2 = nn.LayerNorm(config.d_model)
         self.mlp = MLP(config)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = x + self.attn(self.ln1(x))  # pre-norm
+    def forward(self, x: torch.Tensor, attention_mask: torch.Tensor | None = None) -> torch.Tensor:
+        x = x + self.attn(self.ln1(x), attention_mask)  # pre-norm
         x = x + self.mlp(self.ln2(x))
         return x
 
@@ -108,6 +113,16 @@ class Block(nn.Module):
 class GPT(PreTrainedModel, GenerationMixin):
     config_class = GPTConfig
     _tied_weights_keys = {"head.weight": "tok.weight"}  # {tied -> source}
+
+    @classmethod
+    def _supports_default_dynamic_cache(cls) -> bool:
+        # This model has no KV cache: `prepare_inputs_for_generation` always
+        # recomputes the full window. Returning False stops GenerationMixin
+        # from allocating a `DynamicCache` before generation starts — that
+        # allocation reads `config.num_hidden_layers`, which GPTConfig (using
+        # `n_layer`) does not define, and would otherwise crash regardless of
+        # `use_cache`.
+        return False
 
     def __init__(self, config: GPTConfig) -> None:
         super().__init__(config)
@@ -141,15 +156,34 @@ class GPT(PreTrainedModel, GenerationMixin):
     def set_output_embeddings(self, value: nn.Module) -> None:
         self.head = value
 
-    def forward(self, input_ids, attention_mask=None, labels=None, **kwargs):
+    def forward(
+        self,
+        input_ids,
+        attention_mask=None,
+        position_ids=None,
+        labels=None,
+        output_hidden_states=False,
+        **kwargs,
+    ):
         B, T = input_ids.shape
         if T > self.config.n_ctx:
             raise ValueError(f"sequence length {T} exceeds n_ctx {self.config.n_ctx}")
-        pos = torch.arange(T, device=input_ids.device)
-        x = self.tok(input_ids) + self.pos(pos)[None, :, :]
+        if position_ids is None:
+            if attention_mask is not None:
+                # Left-padded batches (TRL): real tokens get positions 0..n-1.
+                position_ids = (attention_mask.long().cumsum(-1) - 1).clamp(min=0)
+            else:
+                position_ids = torch.arange(T, device=input_ids.device)[None, :]
+        x = self.tok(input_ids) + self.pos(position_ids)
+        hidden = [x] if output_hidden_states else None
         for block in self.blocks:
-            x = block(x)
-        logits = self.head(self.lnf(x))
+            x = block(x, attention_mask)
+            if hidden is not None:
+                hidden.append(x)
+        x = self.lnf(x)
+        if hidden is not None:
+            hidden[-1] = x  # convention: last entry is the final (post-norm) states
+        logits = self.head(x)
         loss = None
         if labels is not None:
             loss = F.cross_entropy(
@@ -157,4 +191,15 @@ class GPT(PreTrainedModel, GenerationMixin):
                 labels[:, 1:].reshape(-1),
                 ignore_index=-100,
             )
-        return CausalLMOutput(loss=loss, logits=logits)
+        return CausalLMOutput(
+            loss=loss,
+            logits=logits,
+            hidden_states=tuple(hidden) if hidden is not None else None,
+        )
+
+    def prepare_inputs_for_generation(self, input_ids, attention_mask=None, **kwargs):
+        # No KV cache exists in this model: always recompute the full window,
+        # whatever use_cache the caller's GenerationConfig requests (TRL's PPO
+        # generation defaults use_cache=True). Dropping cache kwargs here keeps
+        # GenerationMixin from cropping input_ids to cached positions.
+        return {"input_ids": input_ids, "attention_mask": attention_mask}

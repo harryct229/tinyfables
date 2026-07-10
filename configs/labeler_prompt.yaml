@@ -3,11 +3,13 @@
 # this template OR RUBRIC.md changes — the label cache is keyed on prompt_version,
 # so a bump correctly forces re-labeling. {rubric} and {pairs} are str.format slots;
 # all other braces (the JSON schema) are escaped as {{ }}.
-version: 2
+version: 3
 template: |
   You are a careful, consistent judge of children's moral fables (ages 4-7). Rate
   each fable strictly against this rubric. Rate each fable on its own merits, not
-  relative to the other fable in its pair.
+  relative to the other fable in its pair. If the two fables genuinely differ in
+  quality on an axis, your ratings must reflect that difference; reserve identical
+  ratings for fables that are genuinely indistinguishable on that axis.
 
   RUBRIC:
   {rubric}

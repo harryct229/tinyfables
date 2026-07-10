@@ -162,3 +162,94 @@ def test_issue10_noaug_configs_preserve_the_controlled_experiment():
         if eval_aug[key] != eval_noaug[key]
     }
     assert eval_diffs == {"checkpoint": ("runs/base_model", "runs/base_noaug")}
+
+
+def test_margins_full_config_loads():
+    from tinyfables.config import MarginsConfig
+
+    cfg = load_config(REPO / "configs" / "margins_full.yaml", MarginsConfig)
+    assert cfg.preferences == "runs/derive_base/preferences.jsonl"
+    assert cfg.reward_model_dir == "runs/rm_hub"
+    assert cfg.tokenizer_dir == "runs/tokenizer_full"
+    assert cfg.n_ctx == 1024
+    assert cfg.batch_size == 16
+    assert cfg.bucket_edges == [0.1, 0.3, 0.6, 1.0]
+    assert cfg.device == "auto"
+    assert cfg.seed == 0
+
+
+def test_ppo_full_config_loads():
+    from tinyfables.config import PPOStageConfig
+
+    # ADR-0005a: PPO runs only after a passing re-gate; this test asserts the
+    # config loads and the gate path is the honest, currently-NO-GO record —
+    # not that PPO would actually be allowed to run today.
+    cfg = load_config(REPO / "configs" / "ppo_full.yaml", PPOStageConfig)
+    assert cfg.gate == "runs/gate_base/gate.json"
+    assert cfg.preferences == "runs/derive_base/preferences.jsonl"
+    assert cfg.base_checkpoint == "runs/base_model"
+    assert cfg.reward_model_dir == "runs/rm_hub"
+    assert cfg.tokenizer_dir == "runs/tokenizer_full"
+    assert cfg.adr_decision == "ADR-0005a"
+    assert cfg.n_ctx == 1024
+    assert cfg.response_length == 320
+    assert cfg.total_episodes == 2000
+    assert cfg.batch_size == 8
+    assert cfg.gradient_accumulation_steps == 2
+    assert cfg.local_rollout_forward_batch_size == 8
+    assert cfg.num_ppo_epochs == 4
+    assert cfg.kl_coef == 0.2
+    assert cfg.lr == 3.0e-6
+    assert cfg.temperature == 0.9
+    assert cfg.missing_eos_penalty == 1.0
+    assert cfg.n_probe_prompts == 8
+    assert cfg.length_alarm_threshold == 0.25
+    assert cfg.seed == 0
+    assert cfg.device == "auto"
+    assert cfg.fp16 is True
+
+
+def test_samples_full_config_loads():
+    from tinyfables.config import SamplesConfig
+
+    cfg = load_config(REPO / "configs" / "samples_full.yaml", SamplesConfig)
+    assert cfg.base_checkpoint == "runs/base_model"
+    assert cfg.aligned_checkpoint == "runs/aligned_model"
+    assert cfg.tokenizer_dir == "runs/tokenizer_full"
+    assert cfg.source.hf_dataset == "klusai/ds-tf1-en-3m"
+    assert cfg.source.hf_split == "validation"
+    assert cfg.n_specs == 20
+    assert cfg.max_new_tokens == 320
+    assert cfg.min_new_tokens == 80
+    assert cfg.temperature == 0.9
+    assert cfg.top_k == 50
+    assert cfg.seed == 0
+    assert cfg.device == "auto"
+
+
+def test_dpo_full_config_loads():
+    from tinyfables.config import DPOStageConfig
+
+    # ADR-0005b: DPO is the pre-declared fallback branch of ADR-0005; it ships
+    # the Aligned Model if the re-gate still fails. This test only asserts the
+    # config loads.
+    cfg = load_config(REPO / "configs" / "dpo_full.yaml", DPOStageConfig)
+    assert cfg.preferences == "runs/derive_base/preferences.jsonl"
+    assert cfg.base_checkpoint == "runs/base_model"
+    assert cfg.tokenizer_dir == "runs/tokenizer_full"
+    assert cfg.adr_decision == "ADR-0005b"
+    assert cfg.n_ctx == 1024
+    assert cfg.beta == 0.1
+    assert cfg.lr == 5.0e-6
+    assert cfg.num_train_epochs == 3.0
+    assert cfg.batch_size == 8
+    assert cfg.gradient_accumulation_steps == 2
+    assert cfg.min_margin == 0.0
+    assert cfg.logging_steps == 10
+    assert cfg.n_probe_prompts == 8
+    assert cfg.probe_max_new_tokens == 320
+    assert cfg.temperature == 0.9
+    assert cfg.length_alarm_threshold == 0.25
+    assert cfg.seed == 0
+    assert cfg.device == "auto"
+    assert cfg.fp16 is True

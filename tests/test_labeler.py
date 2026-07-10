@@ -49,7 +49,7 @@ def test_labeler_prompt_is_versioned_and_slotted():
 
 def test_load_prompt_returns_version_and_template():
     version, template = load_prompt(REPO / "configs" / "labeler_prompt.yaml")
-    assert version == 2
+    assert version == 3
     assert "{rubric}" not in build_batch_prompt(
         "RUBRIC",
         template,

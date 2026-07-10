@@ -1,0 +1,9 @@
+# ADR-0005 voted derivation: majority vote over the three prompt-v3 label caches.
+labels: runs/labels_v3_s0/labels.jsonl
+extra_labels:
+  - runs/labels_v3_s1/labels.jsonl
+  - runs/labels_v3_s2/labels.jsonl
+pairs: runs/pairgen_base/pairs.jsonl
+weight_delta: 0.1
+held_out_fraction: 0.10
+seed: 0

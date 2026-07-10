@@ -1,0 +1,22 @@
+gate: runs/gate_base/gate.json          # honest record: NO-GO today — this config only runs if a future gate passes
+preferences: runs/derive_base/preferences.jsonl
+base_checkpoint: runs/base_model
+reward_model_dir: runs/rm_hub
+tokenizer_dir: runs/tokenizer_full
+adr_decision: ADR-0005a
+n_ctx: 1024
+response_length: 320
+total_episodes: 2000
+batch_size: 8
+gradient_accumulation_steps: 2
+local_rollout_forward_batch_size: 8
+num_ppo_epochs: 4
+kl_coef: 0.2
+lr: 3.0e-6
+temperature: 0.9
+missing_eos_penalty: 1.0
+n_probe_prompts: 8
+length_alarm_threshold: 0.25
+seed: 0
+device: auto
+fp16: true

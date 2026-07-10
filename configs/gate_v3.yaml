@@ -1,0 +1,6 @@
+# ADR-0005 re-gate: voted audit + retrained RM. Honest verdict either way —
+# PASS unlocks PPO (ADR-0005a); FAIL means DPO ships (ADR-0005b).
+audit: runs/audit_v3/audit.json
+reward_summary: runs/reward_v3/reward_summary.json
+rm_accuracy_gate: 0.65
+require_labeler_self_consistency: true

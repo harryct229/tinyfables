@@ -189,6 +189,20 @@ class LabelConfig:
             raise ValueError("retry_delay_seconds must be non-negative")
 
 
+def _validate_extra_labels(labels: str, extra_labels: list[str] | None) -> None:
+    """Shared validation for the ADR-0005 majority-vote `extra_labels` field:
+    None keeps single-cache behavior; otherwise the list must be non-empty
+    and every path (including the primary `labels`) must be distinct."""
+
+    if extra_labels is None:
+        return
+    if not extra_labels:
+        raise ValueError("extra_labels must be non-empty if provided")
+    all_paths = [labels, *extra_labels]
+    if len(set(all_paths)) != len(all_paths):
+        raise ValueError("extra_labels must not duplicate each other or labels")
+
+
 @dataclass(frozen=True)
 class DeriveConfig:
     labels: str
@@ -196,12 +210,14 @@ class DeriveConfig:
     weight_delta: float = 0.1
     held_out_fraction: float = 0.10
     seed: int = 0
+    extra_labels: list[str] | None = None  # ADR-0005 majority-vote cache paths
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.held_out_fraction <= 1.0:
             raise ValueError("held_out_fraction must be in [0, 1]")
         if not 0.0 < self.weight_delta < 1.0:
             raise ValueError("weight_delta must be in (0, 1)")
+        _validate_extra_labels(self.labels, self.extra_labels)
 
 
 @dataclass(frozen=True)
@@ -209,12 +225,14 @@ class AuditConfig:
     labels: str
     self_consistency_gate: float = 0.85
     position_swap_review_threshold: float = 0.5
+    extra_labels: list[str] | None = None  # ADR-0005 majority-vote cache paths
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.self_consistency_gate <= 1.0:
             raise ValueError("self_consistency_gate must be in [0, 1]")
         if not 0.0 <= self.position_swap_review_threshold <= 1.0:
             raise ValueError("position_swap_review_threshold must be in [0, 1]")
+        _validate_extra_labels(self.labels, self.extra_labels)
 
 
 @dataclass(frozen=True)
@@ -283,6 +301,128 @@ class GateConfig:
             raise ValueError("require_labeler_self_consistency must be a boolean")
         if not self.require_labeler_self_consistency:
             raise ValueError("labeler self-consistency is required by the production gate policy")
+
+
+@dataclass(frozen=True)
+class MarginsConfig:
+    preferences: str
+    reward_model_dir: str
+    tokenizer_dir: str
+    n_ctx: int = 1024
+    batch_size: int = 16
+    bucket_edges: list[float] | None = None  # defaults to [0.1, 0.3, 0.6, 1.0]
+    device: str = "auto"
+    seed: int = 0
+
+    def __post_init__(self) -> None:
+        if self.bucket_edges is None:
+            object.__setattr__(self, "bucket_edges", [0.1, 0.3, 0.6, 1.0])
+        if self.n_ctx <= 0:
+            raise ValueError("n_ctx must be positive")
+        if self.batch_size <= 0:
+            raise ValueError("batch_size must be positive")
+        edges = self.bucket_edges
+        if not edges or any(e <= 0 for e in edges) or sorted(edges) != list(edges):
+            raise ValueError("bucket_edges must be positive and ascending")
+
+
+@dataclass(frozen=True)
+class PPOStageConfig:
+    gate: str                     # path to gate.json — MUST pass assert_gate_passed
+    preferences: str              # prompts come from the train split; probes from held_out
+    base_checkpoint: str
+    reward_model_dir: str
+    tokenizer_dir: str
+    adr_decision: str             # e.g. "ADR-0005a" — echoed into summary + manifest config
+    n_ctx: int = 1024
+    response_length: int = 320
+    total_episodes: int = 2000
+    batch_size: int = 8           # per-device
+    gradient_accumulation_steps: int = 2
+    local_rollout_forward_batch_size: int = 8
+    num_ppo_epochs: int = 4
+    num_mini_batches: int = 1
+    kl_coef: float = 0.2          # strong KL anchor (design: Feedback stage)
+    lr: float = 3e-6
+    temperature: float = 0.9      # matches pairgen sampling
+    missing_eos_penalty: float | None = 1.0
+    whiten_rewards: bool = False
+    n_probe_prompts: int = 8
+    length_alarm_threshold: float = 0.25
+    seed: int = 0
+    device: str = "auto"          # "cpu" forces use_cpu=True for toy tests
+    fp16: bool = False
+
+    def __post_init__(self) -> None:
+        for name in ("n_ctx", "response_length", "total_episodes", "batch_size",
+                     "gradient_accumulation_steps", "local_rollout_forward_batch_size",
+                     "num_ppo_epochs", "num_mini_batches", "n_probe_prompts"):
+            if getattr(self, name) <= 0:
+                raise ValueError(f"{name} must be positive")
+        if self.lr <= 0 or self.temperature <= 0:
+            raise ValueError("lr and temperature must be positive")
+        if not 0.0 < self.length_alarm_threshold:
+            raise ValueError("length_alarm_threshold must be positive")
+        if not self.adr_decision:
+            raise ValueError("adr_decision is required on the Aligned Model manifest")
+        if not self.response_length < self.n_ctx:
+            raise ValueError("response_length must be < n_ctx")
+
+
+@dataclass(frozen=True)
+class DPOStageConfig:
+    preferences: str
+    base_checkpoint: str
+    tokenizer_dir: str
+    adr_decision: str
+    n_ctx: int = 1024             # -> DPOConfig max_length
+    beta: float = 0.1
+    lr: float = 5e-6
+    num_train_epochs: float = 1.0
+    batch_size: int = 8
+    gradient_accumulation_steps: int = 2
+    min_margin: float = 0.0       # keep pairs with aggregate margin >= this
+    logging_steps: int = 10
+    n_probe_prompts: int = 8
+    probe_max_new_tokens: int = 320
+    temperature: float = 0.9
+    length_alarm_threshold: float = 0.25
+    seed: int = 0
+    device: str = "auto"
+    fp16: bool = False
+
+    def __post_init__(self) -> None:
+        for name in ("n_ctx", "batch_size", "gradient_accumulation_steps",
+                     "logging_steps", "n_probe_prompts", "probe_max_new_tokens"):
+            if getattr(self, name) <= 0:
+                raise ValueError(f"{name} must be positive")
+        if self.beta <= 0 or self.lr <= 0 or self.num_train_epochs <= 0 or self.temperature <= 0:
+            raise ValueError("beta, lr, num_train_epochs, temperature must be positive")
+        if self.min_margin < 0:
+            raise ValueError("min_margin must be non-negative")
+        if not 0.0 < self.length_alarm_threshold:
+            raise ValueError("length_alarm_threshold must be positive")
+        if not self.adr_decision:
+            raise ValueError("adr_decision is required on the Aligned Model manifest")
+
+
+@dataclass(frozen=True)
+class SamplesConfig:
+    base_checkpoint: str
+    aligned_checkpoint: str
+    tokenizer_dir: str
+    source: SourceSpec
+    n_specs: int = 20
+    max_new_tokens: int = 320
+    min_new_tokens: int = 80
+    temperature: float = 0.9
+    top_k: int = 50
+    seed: int = 0
+    device: str = "auto"
+
+    def __post_init__(self) -> None:
+        if self.n_specs <= 0:
+            raise ValueError("n_specs must be positive")
 
 
 def _build(cls: type[T], data: Any) -> T:

@@ -11,6 +11,10 @@ from tinyfables.feedback import (
     position_flip_rate,
     perturb_weights,
     self_consistency,
+    voted_position_flip_rate,
+    voted_preference,
+    voted_self_consistency,
+    voted_weight_sensitivity,
     weight_sensitivity,
 )
 
@@ -152,3 +156,187 @@ def test_self_consistency_is_mean_pairwise_agreement():
     assert out["n_pairs"] == 2
     assert out["n_unanimous"] == 1
     assert out["mean_agreement"] == pytest.approx((1.0 + 1 / 3) / 2)
+
+
+# --- ADR-0005 majority-vote primitives -------------------------------------
+
+PREF_0 = (HI, LO)
+PREF_1 = (LO, HI)
+TIE_RATINGS = (
+    {"moral": 3, "adherence": 3, "coherence": 3, "prose": 3},
+    {"moral": 3, "adherence": 3, "coherence": 3, "prose": 3},
+)
+
+
+def test_voted_preference_unanimous_wins():
+    assert voted_preference([PREF_0, PREF_0, PREF_0]) == 0
+    assert voted_preference([PREF_1, PREF_1, PREF_1]) == 1
+
+
+def test_voted_preference_two_one_is_majority():
+    assert voted_preference([PREF_0, PREF_0, PREF_1]) == 0
+    assert voted_preference([PREF_1, PREF_1, PREF_0]) == 1
+
+
+def test_voted_preference_split_with_a_tie_has_no_majority():
+    # [0, 1, None] -> None
+    assert voted_preference([PREF_0, PREF_1, TIE_RATINGS]) is None
+
+
+def test_voted_preference_two_ties_and_one_vote_has_no_majority():
+    # [None, None, 0] -> None
+    assert voted_preference([TIE_RATINGS, TIE_RATINGS, PREF_0]) is None
+
+
+def test_voted_preference_zero_zero_one_votes_zero():
+    # [0, 0, 1] -> 0
+    assert voted_preference([PREF_0, PREF_0, PREF_1]) == 0
+
+
+def test_voted_preference_single_cache_never_reaches_quorum():
+    # A quorum needs >=2 agreeing caches, so a single-cache list can never win.
+    assert voted_preference([PREF_0]) is None
+    assert voted_preference([TIE_RATINGS]) is None
+
+
+def test_voted_weight_sensitivity_mirrors_weight_sensitivity_across_caches():
+    robust = (
+        {"moral": 5, "adherence": 5, "coherence": 5, "prose": 5},
+        {"moral": 1, "adherence": 1, "coherence": 1, "prose": 1},
+    )
+    knife = (
+        {"moral": 3, "adherence": 3, "coherence": 3, "prose": 5},
+        {"moral": 3, "adherence": 3, "coherence": 3, "prose": 4},
+    )
+    no_majority = [PREF_0, PREF_1, TIE_RATINGS]
+
+    cohort_ratings = [
+        [robust, robust, robust],
+        no_majority,
+        [knife, knife, knife],
+    ]
+    out = voted_weight_sensitivity(cohort_ratings, delta=0.1)
+    assert out["delta"] == 0.1
+    assert out["n_base_preferences"] == 2
+    rows = {(r["axis"], r["direction"]): r for r in out["rows"]}
+    assert len(out["rows"]) == 8
+    prose_down = rows[("prose", "-")]
+    assert prose_down["n_flipped"] == 1
+    assert prose_down["pct_flipped"] == pytest.approx(0.5)
+    assert all(r["n_flipped"] <= 1 for r in out["rows"])
+    other_flips = sum(
+        r["n_flipped"] for (axis, direction), r in rows.items() if (axis, direction) != ("prose", "-")
+    )
+    assert other_flips == 0
+
+
+def test_voted_position_flip_rate_requires_at_least_two_caches():
+    cache0 = [_inst("p1", "main", "ab", HI, LO), _inst("p1", "swap", "ba", HI, LO)]
+    with pytest.raises(ValueError, match="at least two caches"):
+        voted_position_flip_rate([])
+    with pytest.raises(ValueError, match="at least two caches"):
+        voted_position_flip_rate([cache0])
+
+
+def test_voted_position_flip_rate_raises_on_main_phase_coverage_mismatch():
+    cache0 = [
+        _inst("p1", "main", "ab", HI, LO),
+        _inst("p1", "swap", "ba", HI, LO),
+        _inst("p2", "main", "ab", HI, LO),
+        _inst("p2", "swap", "ba", HI, LO),
+    ]
+    cache1 = [
+        _inst("p1", "main", "ab", HI, LO),
+        _inst("p1", "swap", "ba", HI, LO),
+        # p2's main instance is missing from this cache.
+        _inst("p2", "swap", "ba", HI, LO),
+    ]
+    with pytest.raises(ValueError, match="disagree.*main"):
+        voted_position_flip_rate([cache0, cache1])
+
+
+def test_voted_position_flip_rate_raises_on_swap_phase_coverage_mismatch():
+    cache0 = [
+        _inst("p1", "main", "ab", HI, LO),
+        _inst("p1", "swap", "ba", HI, LO),
+        _inst("p2", "main", "ab", HI, LO),
+        _inst("p2", "swap", "ba", HI, LO),
+    ]
+    cache1 = [
+        _inst("p1", "main", "ab", HI, LO),
+        _inst("p1", "swap", "ba", HI, LO),
+        _inst("p2", "main", "ab", HI, LO),
+        # p2's swap instance is missing from this cache.
+    ]
+    with pytest.raises(ValueError, match="disagree.*swap"):
+        voted_position_flip_rate([cache0, cache1])
+
+
+def test_voted_position_flip_rate_votes_before_comparing():
+    cache0 = [
+        _inst("p1", "main", "ab", HI, LO),
+        _inst("p1", "swap", "ba", HI, LO),
+        _inst("p2", "main", "ab", HI, LO),
+        _inst("p2", "swap", "ba", LO, HI),
+    ]
+    cache1 = [
+        _inst("p1", "main", "ab", HI, LO),
+        _inst("p1", "swap", "ba", HI, LO),
+        _inst("p2", "main", "ab", HI, LO),
+        _inst("p2", "swap", "ba", LO, HI),
+    ]
+    cache2 = [
+        _inst("p1", "main", "ab", HI, LO),
+        _inst("p1", "swap", "ba", LO, HI),
+        _inst("p2", "main", "ab", LO, HI),
+        _inst("p2", "swap", "ba", HI, LO),
+    ]
+    out = voted_position_flip_rate([cache0, cache1, cache2])
+    assert out["n_pairs"] == 2
+    assert out["n_flipped"] == 1
+    assert out["flip_rate"] == pytest.approx(0.5)
+
+
+def test_voted_self_consistency_requires_at_least_two_caches():
+    cache0 = [_inst("c1", "calib-0", "ab", HI, LO), _inst("c1", "calib-1", "ab", HI, LO)]
+    with pytest.raises(ValueError, match="at least two caches"):
+        voted_self_consistency([])
+    with pytest.raises(ValueError, match="at least two caches"):
+        voted_self_consistency([cache0])
+
+
+def test_voted_self_consistency_raises_on_calib_phase_coverage_mismatch():
+    cache0 = [
+        _inst("c1", "calib-0", "ab", HI, LO),
+        _inst("c1", "calib-1", "ab", HI, LO),
+        _inst("c1", "calib-2", "ab", HI, LO),
+    ]
+    cache1 = [
+        _inst("c1", "calib-0", "ab", HI, LO),
+        _inst("c1", "calib-1", "ab", HI, LO),
+        # c1's calib-2 instance is missing from this cache.
+    ]
+    with pytest.raises(ValueError, match="disagree"):
+        voted_self_consistency([cache0, cache1])
+
+
+def test_voted_self_consistency_votes_within_each_phase_group():
+    cache0 = [
+        _inst("c1", "calib-0", "ab", HI, LO),
+        _inst("c1", "calib-1", "ab", HI, LO),
+        _inst("c1", "calib-2", "ab", HI, LO),
+    ]
+    cache1 = [
+        _inst("c1", "calib-0", "ab", HI, LO),
+        _inst("c1", "calib-1", "ab", HI, LO),
+        _inst("c1", "calib-2", "ab", HI, LO),
+    ]
+    cache2 = [
+        _inst("c1", "calib-0", "ab", HI, LO),
+        _inst("c1", "calib-1", "ab", LO, HI),
+        _inst("c1", "calib-2", "ab", LO, HI),
+    ]
+    out = voted_self_consistency([cache0, cache1, cache2])
+    assert out["n_pairs"] == 1
+    assert out["n_unanimous"] == 1
+    assert out["mean_agreement"] == pytest.approx(1.0)

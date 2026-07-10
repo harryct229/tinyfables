@@ -1,7 +1,7 @@
 preferences: runs/derive_base/preferences.jsonl
 base_checkpoint: runs/base_model
 tokenizer_dir: runs/tokenizer_full
-adr_decision: SET-ME-AT-FORK        # e.g. ADR-0005b
+adr_decision: ADR-0005b
 n_ctx: 1024
 beta: 0.1
 lr: 5.0e-6

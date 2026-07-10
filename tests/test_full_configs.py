@@ -125,16 +125,16 @@ def test_margins_full_config_loads():
 def test_ppo_full_config_loads():
     from tinyfables.config import PPOStageConfig
 
-    # adr_decision is deliberately "SET-ME-AT-FORK" (ADR-0005 is decided later);
-    # this test only asserts the config loads and the gate path is the honest,
-    # currently-NO-GO record — not that PPO would actually be allowed to run today.
+    # ADR-0005a: PPO runs only after a passing re-gate; this test asserts the
+    # config loads and the gate path is the honest, currently-NO-GO record —
+    # not that PPO would actually be allowed to run today.
     cfg = load_config(REPO / "configs" / "ppo_full.yaml", PPOStageConfig)
     assert cfg.gate == "runs/gate_base/gate.json"
     assert cfg.preferences == "runs/derive_base/preferences.jsonl"
     assert cfg.base_checkpoint == "runs/base_model"
     assert cfg.reward_model_dir == "runs/rm_hub"
     assert cfg.tokenizer_dir == "runs/tokenizer_full"
-    assert cfg.adr_decision == "SET-ME-AT-FORK"
+    assert cfg.adr_decision == "ADR-0005a"
     assert cfg.n_ctx == 1024
     assert cfg.response_length == 320
     assert cfg.total_episodes == 2000
@@ -174,14 +174,14 @@ def test_samples_full_config_loads():
 def test_dpo_full_config_loads():
     from tinyfables.config import DPOStageConfig
 
-    # adr_decision is deliberately "SET-ME-AT-FORK" -- DPO is the pre-declared
-    # fallback (ADR-0004); which of ADR-0005's branches actually gets forked
-    # into is decided later. This test only asserts the config loads.
+    # ADR-0005b: DPO is the pre-declared fallback branch of ADR-0005; it ships
+    # the Aligned Model if the re-gate still fails. This test only asserts the
+    # config loads.
     cfg = load_config(REPO / "configs" / "dpo_full.yaml", DPOStageConfig)
     assert cfg.preferences == "runs/derive_base/preferences.jsonl"
     assert cfg.base_checkpoint == "runs/base_model"
     assert cfg.tokenizer_dir == "runs/tokenizer_full"
-    assert cfg.adr_decision == "SET-ME-AT-FORK"
+    assert cfg.adr_decision == "ADR-0005b"
     assert cfg.n_ctx == 1024
     assert cfg.beta == 0.1
     assert cfg.lr == 5.0e-6

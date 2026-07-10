@@ -3,7 +3,7 @@ preferences: runs/derive_base/preferences.jsonl
 base_checkpoint: runs/base_model
 reward_model_dir: runs/rm_hub
 tokenizer_dir: runs/tokenizer_full
-adr_decision: SET-ME-AT-FORK            # e.g. ADR-0005a
+adr_decision: ADR-0005a
 n_ctx: 1024
 response_length: 320
 total_episodes: 2000

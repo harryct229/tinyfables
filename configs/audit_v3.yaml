@@ -1,0 +1,6 @@
+# ADR-0005 voted audit: the instrument under audit is the majority-voted labeler.
+labels: runs/labels_v3_s0/labels.jsonl
+extra_labels:
+  - runs/labels_v3_s1/labels.jsonl
+  - runs/labels_v3_s2/labels.jsonl
+self_consistency_gate: 0.85

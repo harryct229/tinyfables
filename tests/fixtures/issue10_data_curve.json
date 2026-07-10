@@ -1,0 +1,32 @@
+{
+  "points": [
+    {
+      "final_loss": 0.000061,
+      "held_out_accuracy": 0.617021,
+      "requested_train_size": 100,
+      "steps": 400,
+      "train_size": 100
+    },
+    {
+      "final_loss": 0.001634,
+      "held_out_accuracy": 0.611702,
+      "requested_train_size": 500,
+      "steps": 400,
+      "train_size": 500
+    },
+    {
+      "final_loss": 0.085327,
+      "held_out_accuracy": 0.579787,
+      "requested_train_size": 1000,
+      "steps": 400,
+      "train_size": 1000
+    },
+    {
+      "final_loss": 0.248901,
+      "held_out_accuracy": 0.62766,
+      "requested_train_size": 2000,
+      "steps": 400,
+      "train_size": 1761
+    }
+  ]
+}

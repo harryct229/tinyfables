@@ -115,6 +115,38 @@ class EvalConfig:
 
 
 @dataclass(frozen=True)
+class FiguresConfig:
+    augmented_eval_dir: str
+    noaug_eval_dir: str
+    reward_dir: str
+    augmented_run_id: str
+    noaug_run_id: str
+    reward_run_id: str
+    augmented_prep_config: str
+    noaug_prep_config: str
+    augmented_pretrain_config: str
+    noaug_pretrain_config: str
+
+    def __post_init__(self) -> None:
+        values = (
+            self.augmented_eval_dir,
+            self.noaug_eval_dir,
+            self.reward_dir,
+            self.augmented_run_id,
+            self.noaug_run_id,
+            self.reward_run_id,
+            self.augmented_prep_config,
+            self.noaug_prep_config,
+            self.augmented_pretrain_config,
+            self.noaug_pretrain_config,
+        )
+        if any(not isinstance(value, str) or not value.strip() for value in values):
+            raise ValueError("figure paths and run ids must be non-empty strings")
+        if len({self.augmented_run_id, self.noaug_run_id, self.reward_run_id}) != 3:
+            raise ValueError("figure run ids must be distinct")
+
+
+@dataclass(frozen=True)
 class PairgenConfig:
     checkpoint: str
     tokenizer_dir: str

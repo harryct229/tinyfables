@@ -80,7 +80,8 @@ def test_ppo_toy_smoke_trains_and_writes_artifacts(tmp_path):
     assert "preferences_sha" in summary and "base_checkpoint_sha" in summary
     assert isinstance(summary["length_alarm_triggered"], bool)
 
-    rows = list(csv.DictReader((out / "ppo_curves.csv").open()))
+    with (out / "ppo_curves.csv").open() as fh:
+        rows = list(csv.DictReader(fh))
     assert rows, "at least one logged iteration"
     for col in ("episode", "objective_kl", "objective_scores", "probe_mean_words", "length_alarm"):
         assert col in rows[0]

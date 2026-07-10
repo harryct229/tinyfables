@@ -350,6 +350,8 @@ class DPOStageConfig:
             raise ValueError("beta, lr, num_train_epochs, temperature must be positive")
         if self.min_margin < 0:
             raise ValueError("min_margin must be non-negative")
+        if not 0.0 < self.length_alarm_threshold:
+            raise ValueError("length_alarm_threshold must be positive")
         if not self.adr_decision:
             raise ValueError("adr_decision is required on the Aligned Model manifest")
 

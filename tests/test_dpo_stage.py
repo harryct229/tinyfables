@@ -63,7 +63,9 @@ def test_dpo_toy_smoke_trains_and_writes_artifacts(tmp_path):
     assert summary["n_train_pairs"] >= 1
     assert isinstance(summary["length_alarm_triggered"], bool)
     assert "preferences_sha" in summary and "base_checkpoint_sha" in summary
-    assert list(csv.DictReader((out / "dpo_curves.csv").open()))
+    with (out / "dpo_curves.csv").open() as fh:
+        rows = list(csv.DictReader(fh))
+    assert rows
 
     manifest = json.loads((out / "manifest.json").read_text())
     assert manifest["stage"] == "dpo"

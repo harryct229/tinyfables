@@ -53,7 +53,7 @@ def run(cfg: DPOStageConfig, out_dir: Path) -> None:
         )
     probe_prompts = sorted({r["prompt"] for r in rows if r["split"] == "held_out"})[: cfg.n_probe_prompts]
     if not probe_prompts:
-        probe_prompts = sorted({r["prompt"] for r in kept})[: cfg.n_probe_prompts]
+        probe_prompts = sorted({r["prompt"] for r in train_rows})[: cfg.n_probe_prompts]
 
     dataset = Dataset.from_list(
         [{"prompt": r["prompt"], "chosen": r["chosen"], "rejected": r["rejected"]} for r in kept]

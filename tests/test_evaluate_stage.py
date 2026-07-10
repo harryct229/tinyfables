@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from tinyfables.config import EvalConfig, PretrainConfig, PrepConfig, SourceSpec, TokenizerConfig
+from tinyfables.stage import sha256_file
 from tinyfables.stages import REGISTRY
 from tinyfables.stages import evaluate as evaluate_stage
 from tinyfables.stages import prep as prep_stage
@@ -50,6 +51,7 @@ def test_evaluate_writes_metrics_report_and_manifest(tmp_path):
     assert 0.0 <= m["generation"]["moral_delivery_rate"] <= 1.0
     manifest = json.loads((out / "manifest.json").read_text())
     assert manifest["stage"] == "evaluate"
+    assert manifest["inputs"]["paraphrases.yaml"] == sha256_file(Path(BANK))
     # calibration worksheet has one row per canonical generation with both extractions
     cal = [json.loads(l) for l in (out / "moral_calibration.jsonl").read_text().splitlines()]
     assert len(cal) == 2 and set(cal[0]) >= {"requested_moral", "ours", "naive", "fable"}

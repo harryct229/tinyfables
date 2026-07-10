@@ -157,6 +157,20 @@ class LabelConfig:
             raise ValueError("retry_delay_seconds must be non-negative")
 
 
+def _validate_extra_labels(labels: str, extra_labels: list[str] | None) -> None:
+    """Shared validation for the ADR-0005 majority-vote `extra_labels` field:
+    None keeps single-cache behavior; otherwise the list must be non-empty
+    and every path (including the primary `labels`) must be distinct."""
+
+    if extra_labels is None:
+        return
+    if not extra_labels:
+        raise ValueError("extra_labels must be non-empty if provided")
+    all_paths = [labels, *extra_labels]
+    if len(set(all_paths)) != len(all_paths):
+        raise ValueError("extra_labels must not duplicate each other or labels")
+
+
 @dataclass(frozen=True)
 class DeriveConfig:
     labels: str
@@ -164,12 +178,14 @@ class DeriveConfig:
     weight_delta: float = 0.1
     held_out_fraction: float = 0.10
     seed: int = 0
+    extra_labels: list[str] | None = None  # ADR-0005 majority-vote cache paths
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.held_out_fraction <= 1.0:
             raise ValueError("held_out_fraction must be in [0, 1]")
         if not 0.0 < self.weight_delta < 1.0:
             raise ValueError("weight_delta must be in (0, 1)")
+        _validate_extra_labels(self.labels, self.extra_labels)
 
 
 @dataclass(frozen=True)
@@ -177,12 +193,14 @@ class AuditConfig:
     labels: str
     self_consistency_gate: float = 0.85
     position_swap_review_threshold: float = 0.5
+    extra_labels: list[str] | None = None  # ADR-0005 majority-vote cache paths
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.self_consistency_gate <= 1.0:
             raise ValueError("self_consistency_gate must be in [0, 1]")
         if not 0.0 <= self.position_swap_review_threshold <= 1.0:
             raise ValueError("position_swap_review_threshold must be in [0, 1]")
+        _validate_extra_labels(self.labels, self.extra_labels)
 
 
 @dataclass(frozen=True)

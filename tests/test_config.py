@@ -206,6 +206,29 @@ def test_audit_config_rejects_invalid_thresholds():
         AuditConfig(labels="runs/labels/labels.jsonl", position_swap_review_threshold=-0.1)
 
 
+def test_audit_config_extra_labels_defaults_to_none():
+    from tinyfables.config import AuditConfig
+
+    cfg = AuditConfig(labels="runs/labels/labels.jsonl")
+    assert cfg.extra_labels is None
+
+
+def test_audit_config_rejects_empty_extra_labels():
+    from tinyfables.config import AuditConfig
+
+    with pytest.raises(ValueError):
+        AuditConfig(labels="runs/labels/labels.jsonl", extra_labels=[])
+
+
+def test_audit_config_rejects_duplicate_extra_labels():
+    from tinyfables.config import AuditConfig
+
+    with pytest.raises(ValueError):
+        AuditConfig(labels="a.jsonl", extra_labels=["b.jsonl", "b.jsonl"])
+    with pytest.raises(ValueError):
+        AuditConfig(labels="a.jsonl", extra_labels=["a.jsonl"])
+
+
 def test_pairgen_config_defaults_match_the_feedback_spec():
     from tinyfables.config import PairgenConfig, SourceSpec
 
@@ -248,6 +271,29 @@ def test_derive_config_rejects_invalid_ranges():
         DeriveConfig(labels="runs/labels/labels.jsonl", pairs="runs/pairs/pairs.jsonl", held_out_fraction=1.1)
     with pytest.raises(ValueError):
         DeriveConfig(labels="runs/labels/labels.jsonl", pairs="runs/pairs/pairs.jsonl", weight_delta=0.0)
+
+
+def test_derive_config_extra_labels_defaults_to_none():
+    from tinyfables.config import DeriveConfig
+
+    cfg = DeriveConfig(labels="runs/labels/labels.jsonl", pairs="runs/pairs/pairs.jsonl")
+    assert cfg.extra_labels is None
+
+
+def test_derive_config_rejects_empty_extra_labels():
+    from tinyfables.config import DeriveConfig
+
+    with pytest.raises(ValueError):
+        DeriveConfig(labels="runs/labels/labels.jsonl", pairs="runs/pairs/pairs.jsonl", extra_labels=[])
+
+
+def test_derive_config_rejects_duplicate_extra_labels():
+    from tinyfables.config import DeriveConfig
+
+    with pytest.raises(ValueError):
+        DeriveConfig(labels="a.jsonl", pairs="p.jsonl", extra_labels=["b.jsonl", "b.jsonl"])
+    with pytest.raises(ValueError):
+        DeriveConfig(labels="a.jsonl", pairs="p.jsonl", extra_labels=["a.jsonl"])
 
 
 def test_reward_train_config_defaults_and_validation():

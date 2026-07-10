@@ -281,6 +281,29 @@ def test_reward_train_config_rejects_invalid_values():
         RewardTrainConfig(preferences="p", base_checkpoint="b", tokenizer_dir="t", curve_sizes=[])
 
 
+def test_ppo_stage_config_rejects_response_length_ge_n_ctx():
+    from tinyfables.config import PPOStageConfig
+
+    with pytest.raises(ValueError, match="response_length must be < n_ctx"):
+        PPOStageConfig(
+            gate="gate.json",
+            preferences="preferences.jsonl",
+            base_checkpoint="runs/base_model",
+            reward_model_dir="runs/reward_model",
+            tokenizer_dir="runs/tokenizer_full",
+            adr_decision="ADR-0005-test",
+            n_ctx=128,
+            response_length=128,
+        )
+
+
+def test_dpo_stage_config_rejects_nonpositive_length_alarm_threshold():
+    from tinyfables.config import DPOStageConfig
+
+    with pytest.raises(ValueError, match="length_alarm_threshold"):
+        DPOStageConfig(preferences="p", base_checkpoint="b", tokenizer_dir="t", adr_decision="ADR-0005-test", length_alarm_threshold=0.0)
+
+
 def test_gate_config_defaults_and_validation():
     from tinyfables.config import GateConfig
 

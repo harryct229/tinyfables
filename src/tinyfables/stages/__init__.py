@@ -6,13 +6,17 @@ from tinyfables.config import (
     AuditConfig,
     BenchmarkConfig,
     DeriveConfig,
+    DPOStageConfig,
     EvalConfig,
     GateConfig,
     LabelConfig,
+    MarginsConfig,
     PairgenConfig,
+    PPOStageConfig,
     PrepConfig,
     PretrainConfig,
     RewardTrainConfig,
+    SamplesConfig,
     TokenizerConfig,
 )
 
@@ -27,5 +31,9 @@ REGISTRY: dict[str, tuple[type, str]] = {
     "label": (LabelConfig, "tinyfables.stages.label"),
     "derive": (DeriveConfig, "tinyfables.stages.derive"),
     "reward": (RewardTrainConfig, "tinyfables.stages.reward"),
+    "margins": (MarginsConfig, "tinyfables.stages.margins"),
     "gate": (GateConfig, "tinyfables.stages.gate"),
+    "ppo": (PPOStageConfig, "tinyfables.stages.ppo"),
+    "dpo": (DPOStageConfig, "tinyfables.stages.dpo"),
+    "samples": (SamplesConfig, "tinyfables.stages.samples"),
 }

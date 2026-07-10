@@ -1,0 +1,28 @@
+{
+  "pass": false,
+  "reasons": [
+    "labeler self-consistency below gate",
+    "reward model held-out accuracy below gate"
+  ],
+  "warnings": [],
+  "thresholds": {
+    "rm_accuracy_gate": 0.65,
+    "labeler_self_consistency_required": true,
+    "labeler_self_consistency_gate": 0.85,
+    "position_swap_review_threshold": 0.5
+  },
+  "inputs": {
+    "audit": {
+      "self_consistency_pass": false,
+      "self_consistency": {"mean_agreement": 0.778, "n_pairs": 30, "n_unanimous": 21},
+      "position_swap": {"flip_rate": 0.295, "n_flipped": 59, "n_pairs": 200},
+      "position_swap_review_flag": false
+    },
+    "reward": {
+      "held_out_accuracy": 0.590426,
+      "n_train": 1761,
+      "n_held_out": 188,
+      "rm_gate_pass": false
+    }
+  }
+}

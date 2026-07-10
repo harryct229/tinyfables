@@ -1,85 +1,79 @@
-# Task 1 Report: Aggregate Score + preference derivation
+# Task 1 Report: `align` extra + HF tokenizer wrapper
 
-## Outcome
-Implemented `tinyfables.feedback` as a torch-free preference module with the ADR-0003 axis order and weights, plus weighted score and tie-skipping preference derivation.
+## Summary
 
-## RED Evidence
-Initial focused test run failed as expected before the module existed:
+Successfully implemented the TRL tokenizer wrapper for issue 08. The implementation adds a PreTrainedTokenizerFast wrapper around the raw tokenizers.Tokenizer with lazy imports to keep the light import path clear of torch/transformers.
 
-```text
-ModuleNotFoundError: No module named 'tinyfables.feedback'
+## What Was Implemented
+
+1. **Added `align` optional dependency to `pyproject.toml`**: Added `align = ["trl>=1.8"]` to `[project.optional-dependencies]` to enable TRL trainer support.
+
+2. **Created `src/tinyfables/hf_tokenizer.py`**: Implemented `load_hf_tokenizer(tokenizer_dir: str | Path, padding_side: str = "right") -> PreTrainedTokenizerFast` with:
+   - Lazy imports of `tokenizers.Tokenizer` and `transformers.PreTrainedTokenizerFast` to preserve light import path
+   - Loads raw tokenizer from `tokenizer.json` in the given directory
+   - Sets `pad_token` to PAD (`<|pad|>`) and `eos_token` to EOT (`<|endoftext|>`)
+   - Configurable `padding_side` with default "right"
+   - No post-processor added; token IDs match raw tokenizer exactly
+
+3. **Created `tests/test_hf_tokenizer.py`**: Two comprehensive tests:
+   - `test_wrapper_matches_raw_tokenizer_and_sets_specials`: Verifies token ID matching, special token configuration, and default padding side
+   - `test_wrapper_left_padding_side`: Tests left-padding configuration with batched input and attention mask verification
+
+## Test Results
+
+### RED phase (before implementation):
+```
+ModuleNotFoundError: No module named 'tinyfables.hf_tokenizer'
+ERROR during collection
 ```
 
-Command:
+### GREEN phase (after implementation):
+```
+tests/test_hf_tokenizer.py::test_wrapper_matches_raw_tokenizer_and_sets_specials PASSED [ 50%]
+tests/test_hf_tokenizer.py::test_wrapper_left_padding_side PASSED        [100%]
 
-```bash
-/Users/thanh/code/tinystories/.venv/bin/pytest tests/test_feedback.py -q
+2 passed in 1.19s
 ```
 
-## GREEN Evidence
-Focused test:
-
-```text
-5 passed in 0.01s
+### Full test suite:
+```
+244 passed, 1 deselected in 6.37s
 ```
 
-Full suite:
+## Light Import Verification
 
-```text
-141 passed, 1 deselected in 4.84s
+```
+python -c "import sys, tinyfables.cli, tinyfables.hf_tokenizer; \
+  assert 'torch' not in sys.modules and 'transformers' not in sys.modules; \
+  print('light')"
+→ light
 ```
 
-## Notes
-- `AXES` is `("moral", "adherence", "coherence", "prose")`.
-- `WEIGHTS` is `{"moral": 0.4, "adherence": 0.3, "coherence": 0.2, "prose": 0.1}`.
-- `derive_preference` returns `0`, `1`, or `None` for exact ties.
+Verified: torch and transformers are NOT loaded at import time. Both are lazily loaded only when `load_hf_tokenizer()` is called.
 
-## Review Fix
-- Added a regression test for the mathematical-tie example:
-  `{"moral": 1, "adherence": 1, "coherence": 1, "prose": 3}` vs
-  `{"moral": 1, "adherence": 1, "coherence": 2, "prose": 1}` now returns `None`.
-- Updated `derive_preference` to use `math.isclose(..., abs_tol=1e-12)` so float-rounding ties are skipped reliably.
+## Files Changed
 
-## Verification
-Required command attempted from the worktree:
+| File | Changes |
+|------|---------|
+| `pyproject.toml` | Added `align = ["trl>=1.8"]` to `[project.optional-dependencies]` |
+| `src/tinyfables/hf_tokenizer.py` | New module with `load_hf_tokenizer()` function |
+| `tests/test_hf_tokenizer.py` | New test file with 2 tests |
 
-```text
-/Users/thanh/code/tinystories/.venv/bin/pytest tests/test_feedback.py -q
-```
+## Commit
 
-Result:
+- **SHA**: e9bc7f1
+- **Message**: `feat(align): trl extra + PreTrainedTokenizerFast wrapper`
 
-```text
-ImportError: No module named 'tinyfables.feedback'
-```
+## Self-Review Findings
 
-Worktree-local rerun:
+✅ **Completeness**: All 7 steps from the brief completed exactly as specified
+✅ **Code Quality**: Follows repo conventions (lazy imports, clear docstring, type hints)
+✅ **Test Coverage**: Two tests verify core functionality (matching, specials, padding)
+✅ **No Regressions**: Full test suite passes (244 tests)
+✅ **Light Imports**: Verified torch/transformers stay out of sys.modules at import
+✅ **YAGNI**: No unnecessary code; minimal, focused implementation
+✅ **Integration Ready**: `load_hf_tokenizer` is the exact interface expected by Tasks 5–6
 
-```text
-PYTHONPATH=src /Users/thanh/code/tinystories/.venv/bin/pytest tests/test_feedback.py -q
-```
+## Concerns
 
-Result:
-
-```text
-6 passed in 0.00s
-```
-
-## Review Fix Follow-Up
-- Replaced the tolerance-based tie check in `derive_preference` with exact `Decimal(str(...))` score comparison built from the existing `WEIGHTS` values.
-- Kept exact mathematical ties skipped, while allowing close-but-distinct scores to produce a winner.
-- Updated tests to cover both the mathematical tie case and a near-equal non-tie.
-
-## Verification Rerun
-Command:
-
-```text
-PYTHONPATH=src /Users/thanh/code/tinystories/.venv/bin/pytest tests/test_feedback.py -q
-```
-
-Result:
-
-```text
-......                                                                   [100%]
-6 passed in 0.00s
-```
+None. The implementation is straightforward and follows the brief precisely. The lazy import strategy is clean and effective.

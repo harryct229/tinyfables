@@ -1,0 +1,24 @@
+# Toy PPO smoke run over the fixture world (CPU, tens of seconds).
+gate: tests/fixtures/gate_pass.json
+preferences: tests/fixtures/preferences_replay.jsonl
+base_checkpoint: runs/pretrain_toy
+reward_model_dir: runs/reward_toy
+tokenizer_dir: runs/tokenizer_toy
+adr_decision: ADR-0005-toy
+n_ctx: 128
+response_length: 12
+total_episodes: 4
+batch_size: 2
+gradient_accumulation_steps: 1
+local_rollout_forward_batch_size: 2
+num_ppo_epochs: 1
+num_mini_batches: 1
+kl_coef: 0.2
+lr: 1.0e-4
+temperature: 0.9
+missing_eos_penalty: 1.0
+n_probe_prompts: 2
+length_alarm_threshold: 0.25
+seed: 0
+device: cpu
+fp16: false

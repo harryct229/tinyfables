@@ -1,0 +1,25 @@
+{
+  "pass": true,
+  "reasons": [],
+  "warnings": [],
+  "thresholds": {
+    "rm_accuracy_gate": 0.65,
+    "labeler_self_consistency_required": true,
+    "labeler_self_consistency_gate": 0.85,
+    "position_swap_review_threshold": 0.5
+  },
+  "inputs": {
+    "audit": {
+      "self_consistency_pass": true,
+      "self_consistency": {"mean_agreement": 0.9, "n_pairs": 30, "n_unanimous": 27},
+      "position_swap": {"flip_rate": 0.2, "n_flipped": 40, "n_pairs": 200},
+      "position_swap_review_flag": false
+    },
+    "reward": {
+      "held_out_accuracy": 0.71,
+      "n_train": 4,
+      "n_held_out": 2,
+      "rm_gate_pass": true
+    }
+  }
+}

@@ -1,0 +1,13 @@
+base_checkpoint: runs/base_model
+aligned_checkpoint: runs/aligned_model
+tokenizer_dir: runs/tokenizer_full
+source:
+  hf_dataset: klusai/ds-tf1-en-3m
+  hf_split: validation
+n_specs: 20
+max_new_tokens: 320
+min_new_tokens: 80
+temperature: 0.9
+top_k: 50
+seed: 0
+device: auto

@@ -1,0 +1,8 @@
+preferences: runs/derive_base/preferences.jsonl
+reward_model_dir: runs/rm_hub          # snapshot of congthanh991/tinyfables-13m-rm
+tokenizer_dir: runs/tokenizer_full
+n_ctx: 1024
+batch_size: 16
+bucket_edges: [0.1, 0.3, 0.6, 1.0]
+device: auto
+seed: 0

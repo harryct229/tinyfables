@@ -367,6 +367,34 @@ steps.
   noisy-label risk in a later ADR. The Reward Model artifact was pushed to
   `congthanh991/tinyfables-13m-rm`.
 
+### Implementation (issue 08, Track A)
+
+- **Both alignment stages land as code** (the fork decision — ADR-0005 — picks which one
+  ships the Aligned Model; the other stays report material). `ppo` wraps TRL 1.8.0's
+  *experimental* PPOTrainer (`trl.experimental.ppo` — PPO left TRL's stable namespace in
+  1.0) and **refuses to start** without a gate-pass record via
+  `gates.assert_gate_passed`, before importing torch/trl or writing anything. `dpo`
+  consumes the same `preferences.jsonl`, needs no reward model at optimization time, and
+  supports a `min_margin` filter (the cheap margin-filtered variant).
+- **GPT grew TRL-compat**: attention_mask-aware attention (finfo.min key-padding mask, so
+  fully-padded query rows don't NaN), position_ids derived from the mask (left-padded
+  batches), `output_hidden_states`, and a cache-proof `prepare_inputs_for_generation`
+  (the model has no KV cache; TRL's GenerationConfig defaults `use_cache=True`). `_supports_default_dynamic_cache() -> False` is defined (transformers' DynamicCache requires num_hidden_layers). The
+  no-mask path is bit-identical to before — resume guarantees hold.
+- **TRL's reward/value contract** (`base_model_prefix` + `.score` + backbone hidden
+  states) is satisfied by `trl_compat.ScoredModelAdapter`, loaded from the issue-07 RM
+  dir; value model = a second adapter instance (standard PPO value init from the RM).
+- **Length-drift alarm** (`length_alarm.py`): fixed held-out probe prompts, mean
+  generated words vs the frozen Base baseline, alarm at >25% drift. PPO probes every
+  logged iteration (TRL logs no length metric); probes snapshot/restore the global torch RNG so measurement never perturbs training. DPO probes before/after training.
+  Reward/KL curves land in `ppo_curves.csv`; the alarm state in each stage summary.
+- **`margins` stage** (the fork diagnostic): RM accuracy over held-out preferences
+  stratified by aggregate-score margin. **`samples` stage**: before/after generations
+  for fixed FableSpecs (the AC artifact). Manifest contract: aligned-model manifests
+  record preferences hash, Base checkpoint sha, and the `adr_decision` id.
+- TRL is the lazy `align` extra (`pip install -e '.[dev,align]'`); tests
+  `importorskip("trl")` so the base suite stays green without it.
+
 ### Operations (from 2026-07-10)
 
 All compute runs (Track B: training, generation, eval at scale) happen on **Colab**

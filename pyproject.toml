@@ -14,6 +14,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+align = ["trl>=1.8"]
 dev = ["pytest>=8.0"]
 gpt2 = ["transformers>=4.40"]
 train = ["trackio", "matplotlib>=3.7"]

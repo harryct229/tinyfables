@@ -187,4 +187,16 @@ def test_issue07_reward_and_gate_toy_chain(tmp_path):
         GateConfig(audit=str(audit_path), reward_summary=str(reward_out / "reward_summary.json")),
         gate_out,
     )
-    assert (gate_out / "gate.json").exists()
+    gate = json.loads((gate_out / "gate.json").read_text())
+    audit_input = gate["inputs"]["audit"]
+    reward_input = gate["inputs"]["reward"]
+
+    assert isinstance(gate["pass"], bool)
+    assert audit_input["self_consistency_pass"] is True
+    assert audit_input["position_swap_review_flag"] is False
+    assert audit_input["self_consistency"]["mean_agreement"] == 0.9
+    assert audit_input["position_swap"]["flip_rate"] == 0.2
+    assert reward_input["n_train"] == 4
+    assert reward_input["n_held_out"] == 2
+    assert 0.0 <= reward_input["held_out_accuracy"] <= 1.0
+    assert gate["pass"] == (reward_input["held_out_accuracy"] >= 0.65)

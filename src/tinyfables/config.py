@@ -315,6 +315,8 @@ class PPOStageConfig:
             raise ValueError("length_alarm_threshold must be positive")
         if not self.adr_decision:
             raise ValueError("adr_decision is required on the Aligned Model manifest")
+        if not self.response_length < self.n_ctx:
+            raise ValueError("response_length must be < n_ctx")
 
 
 def _build(cls: type[T], data: Any) -> T:

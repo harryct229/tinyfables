@@ -31,7 +31,7 @@ def _resolve_device(name: str) -> str:
 
 def run(cfg: PPOStageConfig, out_dir: Path) -> None:
     # Gate FIRST: no torch/trl import, no out_dir writes, before a failing gate.
-    gate = assert_gate_passed(cfg.gate)
+    assert_gate_passed(cfg.gate)
 
     os.environ.setdefault("TRL_EXPERIMENTAL_SILENCE", "1")
     import torch
@@ -155,20 +155,22 @@ def run(cfg: PPOStageConfig, out_dir: Path) -> None:
         save_strategy="no",
     )
     trainer_ref: dict = {}
-    trainer = PPOTrainer(
-        args=args,
-        processing_class=hf_tok,
-        model=policy,
-        ref_model=ref,
-        reward_model=reward_model,
-        train_dataset=dataset,
-        value_model=value_model,
-        eval_dataset=eval_dataset,
-        callbacks=[LengthAlarmCallback(trainer_ref)],
-    )
-    trainer_ref["trainer"] = trainer
-    trainer.train()
-    curves_fh.close()
+    try:
+        trainer = PPOTrainer(
+            args=args,
+            processing_class=hf_tok,
+            model=policy,
+            ref_model=ref,
+            reward_model=reward_model,
+            train_dataset=dataset,
+            value_model=value_model,
+            eval_dataset=eval_dataset,
+            callbacks=[LengthAlarmCallback(trainer_ref)],
+        )
+        trainer_ref["trainer"] = trainer
+        trainer.train()
+    finally:
+        curves_fh.close()
 
     aligned = trainer.policy_model
     aligned.save_pretrained(out_dir)

@@ -51,6 +51,9 @@ def assert_gate_passed(path: str | Path) -> dict:
     configured_accuracy_gate = _require_accuracy(thresholds.get("rm_accuracy_gate"))
     if configured_accuracy_gate < 0.65:
         raise GateError("alignment gate policy weakens the reward model held-out accuracy gate")
+    configured_consistency_gate = _require_accuracy(thresholds.get("labeler_self_consistency_gate"))
+    if configured_consistency_gate < 0.85:
+        raise GateError("alignment gate policy weakens the labeler self-consistency gate")
     if not _require_bool(
         thresholds.get("labeler_self_consistency_required"),
         "labeler self-consistency requirement",
@@ -63,8 +66,14 @@ def assert_gate_passed(path: str | Path) -> dict:
         raise GateError("alignment gate has invalid structure")
     if not _require_bool(audit.get("self_consistency_pass"), "labeler self-consistency result"):
         raise GateError("alignment gate failed: labeler self-consistency below gate")
+    self_consistency = audit.get("self_consistency")
+    if not isinstance(self_consistency, dict):
+        raise GateError("alignment gate has invalid labeler self-consistency")
+    agreement = _require_accuracy(self_consistency.get("mean_agreement"))
+    if agreement < max(0.85, configured_consistency_gate):
+        raise GateError("alignment gate failed: labeler self-consistency below production gate")
 
     accuracy = _require_accuracy(reward.get("held_out_accuracy"))
-    if accuracy < 0.65:
+    if accuracy < max(0.65, configured_accuracy_gate):
         raise GateError("alignment gate failed: reward model held-out accuracy below production gate")
     return gate

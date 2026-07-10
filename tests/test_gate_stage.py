@@ -111,6 +111,17 @@ def test_position_swap_review_flag_is_warning_not_hard_fail(tmp_path):
         ({"thresholds": {"labeler_self_consistency_required": False}}, "policy disables"),
         ({"pass": "true"}, "invalid pass"),
         ({"inputs": {"audit": {"self_consistency_pass": "true"}}}, "invalid labeler"),
+            (
+                {
+                    "inputs": {
+                        "audit": {
+                            "self_consistency_pass": True,
+                            "self_consistency": {"mean_agreement": float("nan")},
+                        }
+                    }
+                },
+                "invalid reward accuracy",
+            ),
         ({"inputs": {"reward": {"held_out_accuracy": float("nan")}}}, "invalid reward accuracy"),
         ({"inputs": {"reward": {"held_out_accuracy": 1.1}}}, "invalid reward accuracy"),
     ],
@@ -122,14 +133,66 @@ def test_assert_gate_passed_fails_closed_on_weakened_or_malformed_gate(tmp_path,
         "thresholds": {
             "rm_accuracy_gate": 0.65,
             "labeler_self_consistency_required": True,
+            "labeler_self_consistency_gate": 0.85,
         },
         "inputs": {
-            "audit": {"self_consistency_pass": True},
+            "audit": {
+                "self_consistency_pass": True,
+                "self_consistency": {"mean_agreement": 0.9},
+            },
             "reward": {"held_out_accuracy": 0.72},
         },
     }
     for key, value in gate_patch.items():
         gate[key].update(value) if isinstance(value, dict) else gate.update({key: value})
+    gate_path = write_json(tmp_path / "gate.json", gate)
+
+    with pytest.raises(GateError, match=message):
+        assert_gate_passed(gate_path)
+
+
+@pytest.mark.parametrize(
+    ("thresholds_patch", "inputs_patch", "message"),
+    [
+        (
+            {"rm_accuracy_gate": 0.80},
+            {"reward": {"held_out_accuracy": 0.70}},
+            "reward model held-out accuracy below production gate",
+        ),
+        (
+            {"labeler_self_consistency_gate": 0.70},
+            {"audit": {"self_consistency": {"mean_agreement": 0.7777777777777778}}},
+            "labeler self-consistency gate",
+        ),
+        (
+            {"labeler_self_consistency_gate": 0.90},
+            {"audit": {"self_consistency": {"mean_agreement": 0.88}}},
+            "labeler self-consistency below production gate",
+        ),
+    ],
+)
+def test_assert_gate_passed_rejects_internally_inconsistent_gate(
+    tmp_path, thresholds_patch, inputs_patch, message
+):
+    gate = {
+        "pass": True,
+        "reasons": [],
+        "thresholds": {
+            "rm_accuracy_gate": 0.65,
+            "labeler_self_consistency_required": True,
+            "labeler_self_consistency_gate": 0.85,
+        },
+        "inputs": {
+            "audit": {
+                "self_consistency_pass": True,
+                "self_consistency": {"mean_agreement": 0.9},
+            },
+            "reward": {"held_out_accuracy": 0.72},
+        },
+    }
+    gate["thresholds"].update(thresholds_patch)
+    for section, patch in inputs_patch.items():
+        gate["inputs"][section].update(patch)
     gate_path = write_json(tmp_path / "gate.json", gate)
 
     with pytest.raises(GateError, match=message):

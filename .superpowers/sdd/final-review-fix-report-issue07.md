@@ -48,3 +48,23 @@ rtk .venv/bin/pytest -q
 rtk git diff --check
 Exited successfully with no output.
 ```
+
+## Final Re-review Follow-up
+
+- `assert_gate_passed` now requires reward accuracy to meet both the production
+  floor and the serialized reward-model accuracy threshold.
+- It independently validates the serialized labeler self-consistency threshold,
+  recorded agreement, and documented `0.85` policy floor.
+- Regression coverage rejects raised RM thresholds, weakened labeler thresholds,
+  insufficient agreement at a raised labeler threshold, and non-finite agreement.
+
+```text
+rtk .venv/bin/pytest tests/test_gate_stage.py -q
+21 passed in 0.08s
+
+rtk .venv/bin/pytest -q
+242 passed, 1 deselected in 7.28s
+
+rtk git diff --check
+Exited successfully with no output.
+```

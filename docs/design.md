@@ -367,6 +367,18 @@ steps.
   noisy-label risk in a later ADR. The Reward Model artifact was pushed to
   `congthanh991/tinyfables-13m-rm`.
 
+### Operations (from 2026-07-10)
+
+All compute runs (Track B: training, generation, eval at scale) happen on **Colab**
+from now on, driven via colab-mcp. Consequences: every stage run on Colab must push its
+artifacts to the Hub before the session ends (Colab disk is ephemeral — an unpushed run
+didn't happen), and inputs are pulled from the Hub, not from a local `runs/`. The local
+`runs/` artifacts on the maintainer's Mac (labels/derive/audit/reward) are canonical
+until mirrored to `congthanh991/tinyfables-preferences` and the model repos — mirror
+them before the next Colab session. Exception: the AI Labeler (`claude -p`) runs on the
+maintainer's Mac (subscription auth); label caches are then pushed to the Hub like any
+artifact. Local machines still run the offline test suite during development.
+
 ## Evaluation
 
 | Layer | What | Cost |

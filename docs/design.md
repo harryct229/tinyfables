@@ -347,6 +347,26 @@ steps.
   silently passed. Artifacts: `runs/labels_base`, `runs/audit_base`, `runs/derive_base`
   (local, gitignored); stable downstream input is `runs/derive_base/preferences.jsonl`.
 
+### Implementation (issue 07)
+
+- **Reward model stage.** `reward` trains the Base Model plus a scalar head using Bradley-Terry
+  loss over `runs/derive_base/preferences.jsonl`. The reward score is pooled from the last
+  non-pad token of `prompt + fable + <|endoftext|>`, matching the prep/generation tokenization
+  contract. The stage writes the RM folder (`backbone/`, `reward_head.pt`,
+  `reward_model_config.json`), `reward_summary.json`, `data_curve.json`, `loss_log.csv`, and
+  manifest last.
+- **Track B real RM run (2026-07-10).** Trained on `1761` train preferences and
+  evaluated on `188` held-out preferences. Held-out accuracy was
+  `0.590`, so the RM accuracy gate (`>=0.65`) was `fail`.
+  Data curve points were: `100 -> 0.617`, `500 -> 0.612`,
+  `1000 -> 0.580`, `2000 requested / 1761 available -> 0.628`.
+- **Alignment gate.** `gate` combines issue 06 audit numbers with RM accuracy into an explicit
+  PPO go/no-go record. The real gate verdict was `NO-GO`: `labeler self-consistency below gate,
+  reward model held-out accuracy below gate`. Because issue 06 labeler self-consistency was
+  `0.778 < 0.85`, the gate is expected to remain no-go unless the project intentionally accepts
+  noisy-label risk in a later ADR. The Reward Model artifact was pushed to
+  `congthanh991/tinyfables-13m-rm`.
+
 ## Evaluation
 
 | Layer | What | Cost |

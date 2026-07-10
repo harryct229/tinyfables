@@ -18,10 +18,10 @@ central safety property.
 
 ## Acceptance criteria
 
-- [ ] RM trains at toy scale inside the test suite; real run reports held-out accuracy
-- [ ] Data-curve artifact with all four points, report-ready
-- [ ] Gate stage emits an explicit pass/fail record with its inputs (audit numbers, RM accuracy)
-- [ ] Reward Model pushed to the Hub
+- [x] RM trains at toy scale inside the test suite; real run reports held-out accuracy
+- [x] Data-curve artifact with all four points, report-ready
+- [x] Gate stage emits an explicit pass/fail record with its inputs (audit numbers, RM accuracy)
+- [x] Reward Model pushed to the Hub
 
 ## Blocked by
 

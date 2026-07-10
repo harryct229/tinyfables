@@ -61,8 +61,10 @@ def encode_reward_text(tokenizer, prompt: str, fable: str, n_ctx: int) -> list[i
     eot_id = tokenizer.token_to_id(EOT)
     if eot_id is None:
         raise ValueError("tokenizer lacks <|endoftext|>")
-    ids = tokenizer.encode(prompt).ids + tokenizer.encode(fable).ids + [eot_id]
-    return ids[:n_ctx]
+    content_ids = tokenizer.encode(prompt).ids + tokenizer.encode(fable).ids
+    if len(content_ids) + 1 <= n_ctx:
+        return content_ids + [eot_id]
+    return content_ids[: n_ctx - 1] + [eot_id]
 
 
 def _pad(

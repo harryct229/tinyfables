@@ -61,6 +61,24 @@ def test_encode_reward_text_appends_eot_and_respects_n_ctx(tmp_path):
     assert ids == tok.encode("Prompt text. ").ids + tok.encode("Fable text.").ids + [tok.token_to_id(EOT)]
 
 
+def test_encode_reward_text_keeps_eot_when_content_exceeds_n_ctx(tmp_path):
+    tok_dir = tmp_path / "tok"
+    tokenizer_stage.run(
+        TokenizerConfig(source=SourceSpec(jsonl_path=str(CORPUS)), vocab_size=512, seed=0),
+        tok_dir,
+    )
+    tok = Tokenizer.from_file(str(tok_dir / "tokenizer.json"))
+    prompt = "Prompt text. "
+    fable = "Fable text."
+    content_ids = tok.encode(prompt).ids + tok.encode(fable).ids
+    n_ctx = len(content_ids)
+
+    ids = encode_reward_text(tok, prompt, fable, n_ctx=n_ctx)
+
+    assert len(ids) == n_ctx
+    assert ids[-1] == tok.token_to_id(EOT)
+
+
 def test_collate_preference_batch_pads_and_builds_attention_masks(tmp_path):
     tok_dir = tmp_path / "tok"
     tokenizer_stage.run(

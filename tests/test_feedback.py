@@ -230,6 +230,48 @@ def test_voted_weight_sensitivity_mirrors_weight_sensitivity_across_caches():
     assert other_flips == 0
 
 
+def test_voted_position_flip_rate_requires_at_least_two_caches():
+    cache0 = [_inst("p1", "main", "ab", HI, LO), _inst("p1", "swap", "ba", HI, LO)]
+    with pytest.raises(ValueError, match="at least two caches"):
+        voted_position_flip_rate([])
+    with pytest.raises(ValueError, match="at least two caches"):
+        voted_position_flip_rate([cache0])
+
+
+def test_voted_position_flip_rate_raises_on_main_phase_coverage_mismatch():
+    cache0 = [
+        _inst("p1", "main", "ab", HI, LO),
+        _inst("p1", "swap", "ba", HI, LO),
+        _inst("p2", "main", "ab", HI, LO),
+        _inst("p2", "swap", "ba", HI, LO),
+    ]
+    cache1 = [
+        _inst("p1", "main", "ab", HI, LO),
+        _inst("p1", "swap", "ba", HI, LO),
+        # p2's main instance is missing from this cache.
+        _inst("p2", "swap", "ba", HI, LO),
+    ]
+    with pytest.raises(ValueError, match="disagree.*main"):
+        voted_position_flip_rate([cache0, cache1])
+
+
+def test_voted_position_flip_rate_raises_on_swap_phase_coverage_mismatch():
+    cache0 = [
+        _inst("p1", "main", "ab", HI, LO),
+        _inst("p1", "swap", "ba", HI, LO),
+        _inst("p2", "main", "ab", HI, LO),
+        _inst("p2", "swap", "ba", HI, LO),
+    ]
+    cache1 = [
+        _inst("p1", "main", "ab", HI, LO),
+        _inst("p1", "swap", "ba", HI, LO),
+        _inst("p2", "main", "ab", HI, LO),
+        # p2's swap instance is missing from this cache.
+    ]
+    with pytest.raises(ValueError, match="disagree.*swap"):
+        voted_position_flip_rate([cache0, cache1])
+
+
 def test_voted_position_flip_rate_votes_before_comparing():
     cache0 = [
         _inst("p1", "main", "ab", HI, LO),
@@ -253,6 +295,29 @@ def test_voted_position_flip_rate_votes_before_comparing():
     assert out["n_pairs"] == 2
     assert out["n_flipped"] == 1
     assert out["flip_rate"] == pytest.approx(0.5)
+
+
+def test_voted_self_consistency_requires_at_least_two_caches():
+    cache0 = [_inst("c1", "calib-0", "ab", HI, LO), _inst("c1", "calib-1", "ab", HI, LO)]
+    with pytest.raises(ValueError, match="at least two caches"):
+        voted_self_consistency([])
+    with pytest.raises(ValueError, match="at least two caches"):
+        voted_self_consistency([cache0])
+
+
+def test_voted_self_consistency_raises_on_calib_phase_coverage_mismatch():
+    cache0 = [
+        _inst("c1", "calib-0", "ab", HI, LO),
+        _inst("c1", "calib-1", "ab", HI, LO),
+        _inst("c1", "calib-2", "ab", HI, LO),
+    ]
+    cache1 = [
+        _inst("c1", "calib-0", "ab", HI, LO),
+        _inst("c1", "calib-1", "ab", HI, LO),
+        # c1's calib-2 instance is missing from this cache.
+    ]
+    with pytest.raises(ValueError, match="disagree"):
+        voted_self_consistency([cache0, cache1])
 
 
 def test_voted_self_consistency_votes_within_each_phase_group():

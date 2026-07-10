@@ -210,10 +210,19 @@ def voted_position_flip_rate(instances_by_cache: list[list[dict]]) -> dict:
     one cache's full instance list (same shape `position_flip_rate` takes
     for a single cache).
 
-    A pair is scored only when it has a main AND a swap instance in EVERY
-    cache, so both sides of the comparison see the same number of ballots.
+    Mirrors `derive`'s strict cross-cache contract: every cache must cover
+    the exact same set of pair_ids in the main phase, and the exact same
+    set in the swap phase. Coverage that differs across caches is a
+    labeling-run bug, not something to paper over by silently scoring only
+    the overlap -- self-consistency is one of ADR-0005's two hard gate
+    hurdles, so partial coverage must surface as a hard failure. A pair is
+    scored only when it has a main AND a swap instance (agreed across every
+    cache), so both sides of the comparison see the same number of ballots.
     None (no majority) counts as a value, matching the single-cache
     `_pref`-comparison semantics."""
+
+    if len(instances_by_cache) < 2:
+        raise ValueError("voting requires at least two caches")
 
     mains = [
         {inst["pair_id"]: inst for inst in instances if inst["phase"] == "main"}
@@ -223,9 +232,19 @@ def voted_position_flip_rate(instances_by_cache: list[list[dict]]) -> dict:
         {inst["pair_id"]: inst for inst in instances if inst["phase"] == "swap"}
         for instances in instances_by_cache
     ]
-    pair_ids = sorted(
-        set.intersection(*(set(m) for m in mains)) & set.intersection(*(set(s) for s in swaps))
-    )
+
+    main_ids = set(mains[0])
+    if any(set(m) != main_ids for m in mains[1:]):
+        raise ValueError(
+            "label caches disagree on the set of pair_ids with a main-phase instance"
+        )
+    swap_ids = set(swaps[0])
+    if any(set(s) != swap_ids for s in swaps[1:]):
+        raise ValueError(
+            "label caches disagree on the set of pair_ids with a swap-phase instance"
+        )
+
+    pair_ids = sorted(main_ids & swap_ids)
 
     n_flipped = 0
     for pair_id in pair_ids:
@@ -247,10 +266,19 @@ def voted_self_consistency(instances_by_cache: list[list[dict]]) -> dict:
     voting across multiple label caches. Each element of
     `instances_by_cache` is one cache's full instance list.
 
+    Mirrors `derive`'s strict cross-cache contract: every cache must cover
+    the exact same set of (pair_id, phase) calibration groups. Coverage
+    that differs across caches is a labeling-run bug, not something to
+    paper over by silently scoring only the overlap -- self-consistency is
+    one of ADR-0005's two hard gate hurdles, so partial coverage must
+    surface as a hard failure rather than a quietly smaller denominator.
     Instances are grouped by (pair_id, phase); a single preference is voted
-    across the caches for each group present in EVERY cache, and the
-    existing pairwise-agreement math then runs over those per-phase voted
-    preferences, exactly like the single-cache `self_consistency`."""
+    across the caches for each group, and the existing pairwise-agreement
+    math then runs over those per-phase voted preferences, exactly like the
+    single-cache `self_consistency`."""
+
+    if len(instances_by_cache) < 2:
+        raise ValueError("voting requires at least two caches")
 
     by_key_per_cache: list[dict[tuple[str, str], dict]] = []
     for instances in instances_by_cache:
@@ -262,7 +290,11 @@ def voted_self_consistency(instances_by_cache: list[list[dict]]) -> dict:
             }
         )
 
-    common_keys = set.intersection(*(set(d) for d in by_key_per_cache))
+    common_keys = set(by_key_per_cache[0])
+    if any(set(d) != common_keys for d in by_key_per_cache[1:]):
+        raise ValueError(
+            "label caches disagree on the set of (pair_id, phase) calibration groups"
+        )
 
     by_pair: dict[str, list[int | None]] = {}
     for pair_id, phase in sorted(common_keys):

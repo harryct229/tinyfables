@@ -156,6 +156,36 @@ def test_voted_audit_self_consistency_differs_from_any_single_cache(tmp_path):
         assert single_a["self_consistency"]["n_unanimous"] == 0
 
 
+def test_voted_audit_rejects_mismatched_main_phase_coverage_across_caches(tmp_path):
+    labels0 = tmp_path / "labels0.jsonl"
+    labels1 = tmp_path / "labels1.jsonl"
+    _write_cache(
+        labels0,
+        [
+            _rec("p1", "main", "ab", HI, LO),
+            _rec("p1", "swap", "ba", HI, LO),
+            _rec("p2", "main", "ab", HI, LO),
+            _rec("p2", "swap", "ba", HI, LO),
+        ],
+    )
+    _write_cache(
+        labels1,
+        [
+            _rec("p1", "main", "ab", HI, LO),
+            _rec("p1", "swap", "ba", HI, LO),
+            # p2's main instance is missing from this cache.
+            _rec("p2", "swap", "ba", HI, LO),
+        ],
+    )
+
+    out = tmp_path / "audit"
+    with pytest.raises(ValueError, match="disagree"):
+        audit_stage.run(
+            AuditConfig(labels=str(labels0), extra_labels=[str(labels1)]),
+            out,
+        )
+
+
 def test_voted_audit_manifest_lists_extra_cache_inputs(tmp_path):
     labels_paths = [tmp_path / f"labels{i}.jsonl" for i in range(3)]
     for path in labels_paths:

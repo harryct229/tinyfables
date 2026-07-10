@@ -1,0 +1,12 @@
+# Issue 10 report figures. On Colab, these paths are populated only from
+# completed local stage outputs or immutable Hub snapshots.
+augmented_eval_dir: runs/eval_aug
+noaug_eval_dir: runs/eval_noaug
+reward_dir: runs/reward_base
+augmented_run_id: issue10-eval-with-aug-v1
+noaug_run_id: issue10-eval-noaug-v1
+reward_run_id: issue07-reward-base-v1
+augmented_prep_config: configs/prep_full.yaml
+noaug_prep_config: configs/prep_noaug_full.yaml
+augmented_pretrain_config: configs/pretrain_full.yaml
+noaug_pretrain_config: configs/pretrain_noaug_full.yaml

@@ -1,0 +1,24 @@
+# Issue 10 no-augmentation Base Model sibling. Scientific hyperparameters are
+# identical to pretrain_full.yaml; only prep/artifact/run identifiers differ.
+prep_dir: runs/prep_noaug
+tokenizer_dir: runs/tokenizer_full
+n_layer: 6
+n_head: 6
+d_model: 384
+n_ctx: 1024
+batch_size: 16
+steps: 20000
+warmup_steps: 200
+lr: 0.0003
+weight_decay: 0.1
+grad_clip: 1.0
+device: auto
+seed: 0
+amp: true
+ckpt_dir: /content/drive/MyDrive/tinyfables/ckpt_base_noaug
+ckpt_every: 500
+keep_last_k: 2
+log_every: 50
+trackio_project: tinyfables-base
+run_name: base-noaug-v1
+ckpt_hub_repo: congthanh991/tinyfables-13m-base-noaug-ckpts

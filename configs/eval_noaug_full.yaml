@@ -1,0 +1,19 @@
+# Issue 10 no-aug evaluation. Parsed config differs from eval_full.yaml only
+# in checkpoint; all val rows, templates, seeds, and generation knobs match.
+checkpoint: runs/base_noaug
+tokenizer_dir: runs/tokenizer_full
+source:
+  hf_dataset: klusai/ds-tf1-en-3m
+  hf_split: validation
+  max_rows: 2000
+paraphrase_bank: configs/paraphrases.yaml
+n_ctx: 1024
+n_perplexity_rows: 500
+n_generations: 50
+max_new_tokens: 320
+min_new_tokens: 80
+temperature: 0.9
+top_k: 50
+moral_threshold: 0.3
+seed: 0
+device: auto

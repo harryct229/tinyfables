@@ -106,3 +106,59 @@ def test_reward_and_gate_full_configs_load():
     assert gate.reward_summary == "runs/reward_base/reward_summary.json"
     assert gate.rm_accuracy_gate == 0.65
     assert gate.require_labeler_self_consistency is True
+
+
+def test_issue10_noaug_configs_preserve_the_controlled_experiment():
+    from dataclasses import asdict
+
+    from tinyfables.config import EvalConfig, PretrainConfig
+
+    prep_aug = asdict(load_config(REPO / "configs" / "prep_full.yaml", PrepConfig))
+    prep_noaug = asdict(load_config(REPO / "configs" / "prep_noaug_full.yaml", PrepConfig))
+    prep_diffs = {
+        key: (prep_aug[key], prep_noaug[key])
+        for key in prep_aug
+        if prep_aug[key] != prep_noaug[key]
+    }
+    assert prep_diffs == {"paraphrase_coverage": (0.15, 0.0)}
+    assert prep_noaug["tokenizer_dir"] == "runs/tokenizer_full"
+    assert prep_noaug["source"] == {
+        "jsonl_path": None,
+        "hf_dataset": "klusai/ds-tf1-en-3m",
+        "hf_split": "train",
+        "max_rows": 450000,
+    }
+
+    pre_aug = asdict(load_config(REPO / "configs" / "pretrain_full.yaml", PretrainConfig))
+    pre_noaug = asdict(
+        load_config(REPO / "configs" / "pretrain_noaug_full.yaml", PretrainConfig)
+    )
+    operational = {"prep_dir", "ckpt_dir", "run_name", "ckpt_hub_repo"}
+    scientific_aug = {key: value for key, value in pre_aug.items() if key not in operational}
+    scientific_noaug = {key: value for key, value in pre_noaug.items() if key not in operational}
+    assert scientific_noaug == scientific_aug
+    assert {
+        key: (pre_aug[key], pre_noaug[key])
+        for key in operational
+        if pre_aug[key] != pre_noaug[key]
+    } == {
+        "prep_dir": ("runs/prep_full", "runs/prep_noaug"),
+        "ckpt_dir": (
+            "/content/drive/MyDrive/tinyfables/ckpt_base",
+            "/content/drive/MyDrive/tinyfables/ckpt_base_noaug",
+        ),
+        "run_name": ("base-v1", "base-noaug-v1"),
+        "ckpt_hub_repo": (
+            None,
+            "congthanh991/tinyfables-13m-base-noaug-ckpts",
+        ),
+    }
+
+    eval_aug = asdict(load_config(REPO / "configs" / "eval_full.yaml", EvalConfig))
+    eval_noaug = asdict(load_config(REPO / "configs" / "eval_noaug_full.yaml", EvalConfig))
+    eval_diffs = {
+        key: (eval_aug[key], eval_noaug[key])
+        for key in eval_aug
+        if eval_aug[key] != eval_noaug[key]
+    }
+    assert eval_diffs == {"checkpoint": ("runs/base_model", "runs/base_noaug")}

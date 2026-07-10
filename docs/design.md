@@ -333,7 +333,19 @@ steps.
 - **`derive` + `audit` stages.** `derive` → `preferences.jsonl` (chosen/rejected +
   aggregates + deterministic train/held-out split) + `sensitivity.json`; `audit` →
   `audit_report.md`/`audit.json` (flip rate + self-consistency vs the ≥0.85 gate).
-- **Track B (real run): _pending_** — gate numbers recorded below after the labeling run.
+- **Track B real feedback run (2026-07-10).** Pairgen ran on Colab T4 from
+  `congthanh991/tinyfables-13m-base` + `congthanh991/tinyfables-tokenizer`, producing
+  **2,000** non-empty, non-identical single-band pairs. Labeling used `claude-sonnet-5`
+  with prompt version **2** and completed **2,290** label instances: 2,000 primary pairs,
+  a 10% position-swap slice, and the 30-pair calibration set re-labeled across the run.
+  `derive` emitted **1,949** preferences and skipped **51** aggregate-score ties
+  (train/held-out split: 1,761/188). Weight-sensitivity at +/-0.1 was low: worst case
+  moral -0.1 flipped **64/1,949 = 3.28%** of non-tie preferences; all other perturbations
+  were lower. Audit result: position-swap flip rate **0.295** (59/200), below the 0.50
+  review flag; Calibration Set self-consistency **0.778** (21/30 unanimous), **below**
+  the 0.85 gate, so issue 07 must treat the reward-model input as flagged rather than
+  silently passed. Artifacts: `runs/labels_base`, `runs/audit_base`, `runs/derive_base`
+  (local, gitignored); stable downstream input is `runs/derive_base/preferences.jsonl`.
 
 ## Evaluation
 

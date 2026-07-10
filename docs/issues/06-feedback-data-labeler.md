@@ -21,14 +21,14 @@ re-labeled at start/middle/end (self-consistency).
 
 ## Acceptance criteria
 
-- [ ] Rubric committed before the real labeling run
-- [ ] Pair-generation stage produces a pairs artifact from any checkpoint
-- [ ] Labeler resumes mid-run from its cache; replay fixtures let the stage run offline in tests
-- [ ] Schema contract test validates strict-JSON ratings against a recorded live sample
-- [ ] Every label carries model version and prompt version
-- [ ] Audit report artifact: position-swap flip rate and Calibration Set self-consistency
-- [ ] Derivation emits preferences and the weight-sensitivity table
-- [ ] Real run complete: ~2,000 pairs labeled; audit numbers within gate thresholds or explicitly flagged
+- [x] Rubric committed before the real labeling run
+- [x] Pair-generation stage produces a pairs artifact from any checkpoint
+- [x] Labeler resumes mid-run from its cache; replay fixtures let the stage run offline in tests
+- [x] Schema contract test validates strict-JSON ratings against a recorded live sample
+- [x] Every label carries model version and prompt version
+- [x] Audit report artifact: position-swap flip rate and Calibration Set self-consistency
+- [x] Derivation emits preferences and the weight-sensitivity table
+- [x] Real run complete: ~2,000 pairs labeled; audit numbers within gate thresholds or explicitly flagged
 
 ## Blocked by
 

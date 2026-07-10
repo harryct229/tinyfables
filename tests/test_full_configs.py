@@ -151,3 +151,31 @@ def test_ppo_full_config_loads():
     assert cfg.seed == 0
     assert cfg.device == "auto"
     assert cfg.fp16 is True
+
+
+def test_dpo_full_config_loads():
+    from tinyfables.config import DPOStageConfig
+
+    # adr_decision is deliberately "SET-ME-AT-FORK" -- DPO is the pre-declared
+    # fallback (ADR-0004); which of ADR-0005's branches actually gets forked
+    # into is decided later. This test only asserts the config loads.
+    cfg = load_config(REPO / "configs" / "dpo_full.yaml", DPOStageConfig)
+    assert cfg.preferences == "runs/derive_base/preferences.jsonl"
+    assert cfg.base_checkpoint == "runs/base_model"
+    assert cfg.tokenizer_dir == "runs/tokenizer_full"
+    assert cfg.adr_decision == "SET-ME-AT-FORK"
+    assert cfg.n_ctx == 1024
+    assert cfg.beta == 0.1
+    assert cfg.lr == 5.0e-6
+    assert cfg.num_train_epochs == 3.0
+    assert cfg.batch_size == 8
+    assert cfg.gradient_accumulation_steps == 2
+    assert cfg.min_margin == 0.0
+    assert cfg.logging_steps == 10
+    assert cfg.n_probe_prompts == 8
+    assert cfg.probe_max_new_tokens == 320
+    assert cfg.temperature == 0.9
+    assert cfg.length_alarm_threshold == 0.25
+    assert cfg.seed == 0
+    assert cfg.device == "auto"
+    assert cfg.fp16 is True

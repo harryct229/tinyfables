@@ -319,6 +319,41 @@ class PPOStageConfig:
             raise ValueError("response_length must be < n_ctx")
 
 
+@dataclass(frozen=True)
+class DPOStageConfig:
+    preferences: str
+    base_checkpoint: str
+    tokenizer_dir: str
+    adr_decision: str
+    n_ctx: int = 1024             # -> DPOConfig max_length
+    beta: float = 0.1
+    lr: float = 5e-6
+    num_train_epochs: float = 1.0
+    batch_size: int = 8
+    gradient_accumulation_steps: int = 2
+    min_margin: float = 0.0       # keep pairs with aggregate margin >= this
+    logging_steps: int = 10
+    n_probe_prompts: int = 8
+    probe_max_new_tokens: int = 320
+    temperature: float = 0.9
+    length_alarm_threshold: float = 0.25
+    seed: int = 0
+    device: str = "auto"
+    fp16: bool = False
+
+    def __post_init__(self) -> None:
+        for name in ("n_ctx", "batch_size", "gradient_accumulation_steps",
+                     "logging_steps", "n_probe_prompts", "probe_max_new_tokens"):
+            if getattr(self, name) <= 0:
+                raise ValueError(f"{name} must be positive")
+        if self.beta <= 0 or self.lr <= 0 or self.num_train_epochs <= 0 or self.temperature <= 0:
+            raise ValueError("beta, lr, num_train_epochs, temperature must be positive")
+        if self.min_margin < 0:
+            raise ValueError("min_margin must be non-negative")
+        if not self.adr_decision:
+            raise ValueError("adr_decision is required on the Aligned Model manifest")
+
+
 def _build(cls: type[T], data: Any) -> T:
     if not isinstance(data, dict):
         raise TypeError(f"expected a mapping for {cls.__name__}, got {type(data).__name__}")

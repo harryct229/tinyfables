@@ -6,6 +6,7 @@ from tinyfables.config import (
     AuditConfig,
     BenchmarkConfig,
     DeriveConfig,
+    DPOStageConfig,
     EvalConfig,
     GateConfig,
     LabelConfig,
@@ -32,4 +33,5 @@ REGISTRY: dict[str, tuple[type, str]] = {
     "margins": (MarginsConfig, "tinyfables.stages.margins"),
     "gate": (GateConfig, "tinyfables.stages.gate"),
     "ppo": (PPOStageConfig, "tinyfables.stages.ppo"),
+    "dpo": (DPOStageConfig, "tinyfables.stages.dpo"),
 }

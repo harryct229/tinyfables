@@ -134,7 +134,7 @@ def _train_model(
             )
 
     held_out_accuracy = _evaluate(model, held_out, tokenizer, cfg, device)
-    if writer is not None:
+    if writer is not None and (not cfg.log_every or steps % cfg.log_every != 0):
         writer.writerow(
             {
                 "step": steps,

@@ -102,3 +102,68 @@ def test_position_swap_review_flag_is_warning_not_hard_fail(tmp_path):
     gate = json.loads((out / "gate.json").read_text())
     assert gate["pass"] is True
     assert "position-swap review flag set" in gate["warnings"]
+
+
+@pytest.mark.parametrize(
+    ("gate_patch", "message"),
+    [
+        ({"thresholds": {"rm_accuracy_gate": 0.5}}, "reward model held-out accuracy"),
+        ({"thresholds": {"labeler_self_consistency_required": False}}, "policy disables"),
+        ({"pass": "true"}, "invalid pass"),
+        ({"inputs": {"audit": {"self_consistency_pass": "true"}}}, "invalid labeler"),
+        ({"inputs": {"reward": {"held_out_accuracy": float("nan")}}}, "invalid reward accuracy"),
+        ({"inputs": {"reward": {"held_out_accuracy": 1.1}}}, "invalid reward accuracy"),
+    ],
+)
+def test_assert_gate_passed_fails_closed_on_weakened_or_malformed_gate(tmp_path, gate_patch, message):
+    gate = {
+        "pass": True,
+        "reasons": [],
+        "thresholds": {
+            "rm_accuracy_gate": 0.65,
+            "labeler_self_consistency_required": True,
+        },
+        "inputs": {
+            "audit": {"self_consistency_pass": True},
+            "reward": {"held_out_accuracy": 0.72},
+        },
+    }
+    for key, value in gate_patch.items():
+        gate[key].update(value) if isinstance(value, dict) else gate.update({key: value})
+    gate_path = write_json(tmp_path / "gate.json", gate)
+
+    with pytest.raises(GateError, match=message):
+        assert_gate_passed(gate_path)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"rm_accuracy_gate": 0.64}, "rm_accuracy_gate"),
+        ({"require_labeler_self_consistency": False}, "labeler self-consistency"),
+        ({"require_labeler_self_consistency": "false"}, "must be a boolean"),
+    ],
+)
+def test_gate_config_rejects_weakened_or_malformed_policy(kwargs, message):
+    with pytest.raises(ValueError, match=message):
+        GateConfig(audit="audit.json", reward_summary="reward.json", **kwargs)
+
+
+@pytest.mark.parametrize(
+    ("audit_patch", "reward_patch", "message"),
+    [
+        ({"self_consistency_pass": "false"}, {}, "self_consistency_pass"),
+        ({}, {"held_out_accuracy": float("nan")}, "held_out_accuracy"),
+        ({}, {"held_out_accuracy": -0.1}, "held_out_accuracy"),
+    ],
+)
+def test_gate_stage_rejects_malformed_input_values(tmp_path, audit_patch, reward_patch, message):
+    audit_data = audit()
+    audit_data["gate"].update(audit_patch)
+    reward_data = reward()
+    reward_data.update(reward_patch)
+    audit_path = write_json(tmp_path / "audit.json", audit_data)
+    reward_path = write_json(tmp_path / "reward_summary.json", reward_data)
+
+    with pytest.raises(ValueError, match=message):
+        gate_stage.run(GateConfig(audit=str(audit_path), reward_summary=str(reward_path)), tmp_path / "gate")

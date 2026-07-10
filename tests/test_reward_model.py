@@ -32,11 +32,16 @@ def test_reward_model_pools_last_non_pad_token():
     rm = RewardModel(tiny_backbone()).eval()
     ids = torch.randint(0, 32, (2, 8))
     mask = torch.tensor([[1, 1, 1, 1, 0, 0, 0, 0], [1, 1, 1, 1, 1, 1, 1, 1]])
+    hidden = torch.arange(2 * 8 * 16, dtype=torch.float32).reshape(2, 8, 16)
+    rm.hidden_states = lambda _input_ids: hidden
+    with torch.no_grad():
+        rm.reward_head.weight.zero_()
+        rm.reward_head.weight[0, 0] = 1.0
+        rm.reward_head.bias.zero_()
 
     rewards = rm(ids, mask)
 
-    assert rewards.shape == (2,)
-    assert torch.isfinite(rewards).all()
+    assert torch.equal(rewards, torch.tensor([48.0, 240.0]))
 
 
 def test_bradley_terry_loss_and_accuracy():

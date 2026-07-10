@@ -3,10 +3,27 @@
 from __future__ import annotations
 
 import json
+import math
+from numbers import Real
 from pathlib import Path
 
 from tinyfables.config import GateConfig
 from tinyfables.stage import write_manifest
+
+
+def _require_bool(value: object, name: str) -> bool:
+    if type(value) is not bool:
+        raise ValueError(f"{name} must be a boolean")
+    return value
+
+
+def _require_accuracy(value: object) -> float:
+    if not isinstance(value, Real) or isinstance(value, bool):
+        raise ValueError("held_out_accuracy must be a finite number in [0, 1]")
+    accuracy = float(value)
+    if not math.isfinite(accuracy) or not 0.0 <= accuracy <= 1.0:
+        raise ValueError("held_out_accuracy must be a finite number in [0, 1]")
+    return accuracy
 
 
 def run(cfg: GateConfig, out_dir: Path) -> None:
@@ -19,15 +36,18 @@ def run(cfg: GateConfig, out_dir: Path) -> None:
     reasons: list[str] = []
     warnings: list[str] = []
 
-    labeler_pass = bool(audit["gate"]["self_consistency_pass"])
-    if cfg.require_labeler_self_consistency and not labeler_pass:
+    labeler_pass = _require_bool(audit["gate"]["self_consistency_pass"], "self_consistency_pass")
+    if not labeler_pass:
         reasons.append("labeler self-consistency below gate")
 
-    rm_accuracy = float(reward["held_out_accuracy"])
+    rm_accuracy = _require_accuracy(reward["held_out_accuracy"])
     if rm_accuracy < cfg.rm_accuracy_gate:
         reasons.append("reward model held-out accuracy below gate")
 
-    if audit["gate"].get("position_swap_review_flag", False):
+    position_swap_review_flag = _require_bool(
+        audit["gate"].get("position_swap_review_flag", False), "position_swap_review_flag"
+    )
+    if position_swap_review_flag:
         warnings.append("position-swap review flag set")
 
     gate = {
@@ -45,7 +65,7 @@ def run(cfg: GateConfig, out_dir: Path) -> None:
                 "self_consistency_pass": labeler_pass,
                 "self_consistency": audit["self_consistency"],
                 "position_swap": audit["position_swap"],
-                "position_swap_review_flag": audit["gate"].get("position_swap_review_flag", False),
+                "position_swap_review_flag": position_swap_review_flag,
             },
             "reward": {
                 "held_out_accuracy": rm_accuracy,

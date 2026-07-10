@@ -95,6 +95,7 @@ def test_reward_stage_trains_and_writes_artifacts(tmp_path):
     rows = list(csv.DictReader(open(out / "loss_log.csv")))
     assert rows
     assert set(rows[0]) == {"step", "loss", "held_out_accuracy"}
+    assert [row["step"] for row in rows].count("8") == 1
 
 
 def test_saved_reward_model_can_score_after_stage(tmp_path):

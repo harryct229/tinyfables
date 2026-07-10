@@ -357,7 +357,7 @@ steps.
   manifest last.
 - **Track B real RM run (2026-07-10).** Trained on `1761` train preferences and
   evaluated on `188` held-out preferences. Held-out accuracy was
-  `0.590`, so the RM accuracy gate (`>=0.65`) was `fail`.
+  `0.590426`, so the RM accuracy gate (`>=0.65`) was `fail`.
   Data curve points were: `100 -> 0.617`, `500 -> 0.612`,
   `1000 -> 0.580`, `2000 requested / 1761 available -> 0.628`.
 - **Alignment gate.** `gate` combines issue 06 audit numbers with RM accuracy into an explicit

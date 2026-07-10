@@ -3,6 +3,8 @@ typo in an experiment config fails loudly instead of silently using defaults."""
 
 from __future__ import annotations
 
+import math
+from numbers import Real
 from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Any, TypeVar
@@ -238,8 +240,17 @@ class GateConfig:
     require_labeler_self_consistency: bool = True
 
     def __post_init__(self) -> None:
-        if not 0.0 <= self.rm_accuracy_gate <= 1.0:
-            raise ValueError("rm_accuracy_gate must be in [0, 1]")
+        if (
+            not isinstance(self.rm_accuracy_gate, Real)
+            or isinstance(self.rm_accuracy_gate, bool)
+            or not math.isfinite(self.rm_accuracy_gate)
+            or not 0.65 <= self.rm_accuracy_gate <= 1.0
+        ):
+            raise ValueError("rm_accuracy_gate must be a finite number in [0.65, 1]")
+        if type(self.require_labeler_self_consistency) is not bool:
+            raise ValueError("require_labeler_self_consistency must be a boolean")
+        if not self.require_labeler_self_consistency:
+            raise ValueError("labeler self-consistency is required by the production gate policy")
 
 
 def _build(cls: type[T], data: Any) -> T:

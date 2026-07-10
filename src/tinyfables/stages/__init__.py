@@ -9,6 +9,7 @@ from tinyfables.config import (
     EvalConfig,
     GateConfig,
     LabelConfig,
+    MarginsConfig,
     PairgenConfig,
     PrepConfig,
     PretrainConfig,
@@ -27,5 +28,6 @@ REGISTRY: dict[str, tuple[type, str]] = {
     "label": (LabelConfig, "tinyfables.stages.label"),
     "derive": (DeriveConfig, "tinyfables.stages.derive"),
     "reward": (RewardTrainConfig, "tinyfables.stages.reward"),
+    "margins": (MarginsConfig, "tinyfables.stages.margins"),
     "gate": (GateConfig, "tinyfables.stages.gate"),
 }

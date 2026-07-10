@@ -106,3 +106,17 @@ def test_reward_and_gate_full_configs_load():
     assert gate.reward_summary == "runs/reward_base/reward_summary.json"
     assert gate.rm_accuracy_gate == 0.65
     assert gate.require_labeler_self_consistency is True
+
+
+def test_margins_full_config_loads():
+    from tinyfables.config import MarginsConfig
+
+    cfg = load_config(REPO / "configs" / "margins_full.yaml", MarginsConfig)
+    assert cfg.preferences == "runs/derive_base/preferences.jsonl"
+    assert cfg.reward_model_dir == "runs/rm_hub"
+    assert cfg.tokenizer_dir == "runs/tokenizer_full"
+    assert cfg.n_ctx == 1024
+    assert cfg.batch_size == 16
+    assert cfg.bucket_edges == [0.1, 0.3, 0.6, 1.0]
+    assert cfg.device == "auto"
+    assert cfg.seed == 0

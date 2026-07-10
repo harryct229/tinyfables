@@ -253,6 +253,29 @@ class GateConfig:
             raise ValueError("labeler self-consistency is required by the production gate policy")
 
 
+@dataclass(frozen=True)
+class MarginsConfig:
+    preferences: str
+    reward_model_dir: str
+    tokenizer_dir: str
+    n_ctx: int = 1024
+    batch_size: int = 16
+    bucket_edges: list[float] | None = None  # defaults to [0.1, 0.3, 0.6, 1.0]
+    device: str = "auto"
+    seed: int = 0
+
+    def __post_init__(self) -> None:
+        if self.bucket_edges is None:
+            object.__setattr__(self, "bucket_edges", [0.1, 0.3, 0.6, 1.0])
+        if self.n_ctx <= 0:
+            raise ValueError("n_ctx must be positive")
+        if self.batch_size <= 0:
+            raise ValueError("batch_size must be positive")
+        edges = self.bucket_edges
+        if not edges or any(e <= 0 for e in edges) or sorted(edges) != list(edges):
+            raise ValueError("bucket_edges must be positive and ascending")
+
+
 def _build(cls: type[T], data: Any) -> T:
     if not isinstance(data, dict):
         raise TypeError(f"expected a mapping for {cls.__name__}, got {type(data).__name__}")

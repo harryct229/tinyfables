@@ -18,41 +18,24 @@ def probe_lengths(
     seed: int,
     device=None,
 ) -> dict:
-    import torch
-    from tinyfables.generate import encode_prompt  # torch imported lazily via caller
-    from tinyfables.constants import EOT
+    from tinyfables.generate import generate_fable_ids
 
-    device = device or next(model.parameters()).device
     words: list[int] = []
     new_tokens: list[int] = []
 
-    eot_id = tokenizer.token_to_id(EOT)
-
     for i, prompt in enumerate(prompts):
-        prompt_ids = encode_prompt(tokenizer, prompt)
-        input_ids = torch.tensor([prompt_ids], dtype=torch.long, device=device)
-
-        if seed is not None:
-            torch.manual_seed(seed + i)
-
-        with torch.no_grad():
-            out = model.generate(
-                input_ids,
-                max_new_tokens=max_new_tokens,
-                do_sample=True,
-                use_cache=False,
-                pad_token_id=eot_id,
-                eos_token_id=eot_id,
-                temperature=temperature,
-            )
-
-        new_ids = out[0, len(prompt_ids):].tolist()
-        if eot_id in new_ids:
-            new_ids = new_ids[: new_ids.index(eot_id)]
-
-        fable = tokenizer.decode(new_ids)
+        fable, ids = generate_fable_ids(
+            model,
+            tokenizer,
+            prompt,
+            max_new_tokens=max_new_tokens,
+            do_sample=True,
+            temperature=temperature,
+            seed=seed + i,
+            device=device,
+        )
         words.append(len(fable.split()))
-        new_tokens.append(len(new_ids))
+        new_tokens.append(len(ids))
 
     return {
         "mean_words": mean(words) if words else 0.0,

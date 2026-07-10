@@ -25,7 +25,7 @@ def test_cli_run_dispatches_feedback_stages_lazily(tmp_path, monkeypatch):
     monkeypatch.setattr(cli, "load_config", fake_load_config)
     monkeypatch.setattr(cli.importlib, "import_module", fake_import_module)
 
-    for stage in ("pairgen", "label", "derive", "audit"):
+    for stage in ("pairgen", "label", "derive", "audit", "reward", "gate"):
         out_dir = tmp_path / stage
         assert cli.main(["run", stage, "--config", str(cfg), "--out", str(out_dir)]) == 0
 
@@ -38,4 +38,8 @@ def test_cli_run_dispatches_feedback_stages_lazily(tmp_path, monkeypatch):
         ("run", "derive", "DeriveConfig", str(tmp_path / "derive")),
         ("load", "AuditConfig", str(cfg)),
         ("run", "audit", "AuditConfig", str(tmp_path / "audit")),
+        ("load", "RewardTrainConfig", str(cfg)),
+        ("run", "reward", "RewardTrainConfig", str(tmp_path / "reward")),
+        ("load", "GateConfig", str(cfg)),
+        ("run", "gate", "GateConfig", str(tmp_path / "gate")),
     ]

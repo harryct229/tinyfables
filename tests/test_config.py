@@ -248,3 +248,45 @@ def test_derive_config_rejects_invalid_ranges():
         DeriveConfig(labels="runs/labels/labels.jsonl", pairs="runs/pairs/pairs.jsonl", held_out_fraction=1.1)
     with pytest.raises(ValueError):
         DeriveConfig(labels="runs/labels/labels.jsonl", pairs="runs/pairs/pairs.jsonl", weight_delta=0.0)
+
+
+def test_reward_train_config_defaults_and_validation():
+    from tinyfables.config import RewardTrainConfig
+
+    cfg = RewardTrainConfig(
+        preferences="runs/derive_base/preferences.jsonl",
+        base_checkpoint="runs/base_model",
+        tokenizer_dir="runs/tokenizer_full",
+    )
+    assert cfg.n_ctx == 1024
+    assert cfg.batch_size == 16
+    assert cfg.steps == 1000
+    assert cfg.curve_sizes == [100, 500, 1000, 2000]
+    assert cfg.curve_steps == 400
+    assert cfg.accuracy_gate == 0.65
+    assert cfg.device == "auto"
+    assert cfg.amp is True
+
+
+def test_reward_train_config_rejects_invalid_values():
+    from tinyfables.config import RewardTrainConfig
+
+    with pytest.raises(ValueError, match="batch_size"):
+        RewardTrainConfig(preferences="p", base_checkpoint="b", tokenizer_dir="t", batch_size=0)
+    with pytest.raises(ValueError, match="steps"):
+        RewardTrainConfig(preferences="p", base_checkpoint="b", tokenizer_dir="t", steps=0)
+    with pytest.raises(ValueError, match="accuracy_gate"):
+        RewardTrainConfig(preferences="p", base_checkpoint="b", tokenizer_dir="t", accuracy_gate=1.5)
+    with pytest.raises(ValueError, match="curve_sizes"):
+        RewardTrainConfig(preferences="p", base_checkpoint="b", tokenizer_dir="t", curve_sizes=[])
+
+
+def test_gate_config_defaults_and_validation():
+    from tinyfables.config import GateConfig
+
+    cfg = GateConfig(audit="runs/audit_base/audit.json", reward_summary="runs/reward_base/reward_summary.json")
+    assert cfg.rm_accuracy_gate == 0.65
+    assert cfg.require_labeler_self_consistency is True
+
+    with pytest.raises(ValueError, match="rm_accuracy_gate"):
+        GateConfig(audit="a", reward_summary="r", rm_accuracy_gate=-0.1)

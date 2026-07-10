@@ -1,0 +1,4 @@
+audit: runs/audit_base/audit.json
+reward_summary: runs/reward_base/reward_summary.json
+rm_accuracy_gate: 0.65
+require_labeler_self_consistency: true

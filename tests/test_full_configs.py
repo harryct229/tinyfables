@@ -84,3 +84,25 @@ def test_derive_and_audit_full_configs_load():
     assert a.labels == "runs/labels_base/labels.jsonl"
     assert a.self_consistency_gate == 0.85
     assert a.position_swap_review_threshold == 0.5
+
+
+def test_reward_and_gate_full_configs_load():
+    from tinyfables.config import GateConfig, RewardTrainConfig, load_config
+
+    reward = load_config(REPO / "configs" / "reward_full.yaml", RewardTrainConfig)
+    assert reward.preferences == "runs/derive_base/preferences.jsonl"
+    assert reward.base_checkpoint == "runs/base_model"
+    assert reward.tokenizer_dir == "runs/tokenizer_full"
+    assert reward.n_ctx == 1024
+    assert reward.batch_size == 16
+    assert reward.steps == 1000
+    assert reward.curve_sizes == [100, 500, 1000, 2000]
+    assert reward.curve_steps == 400
+    assert reward.accuracy_gate == 0.65
+    assert reward.amp is True
+
+    gate = load_config(REPO / "configs" / "gate_full.yaml", GateConfig)
+    assert gate.audit == "runs/audit_base/audit.json"
+    assert gate.reward_summary == "runs/reward_base/reward_summary.json"
+    assert gate.rm_accuracy_gate == 0.65
+    assert gate.require_labeler_self_consistency is True

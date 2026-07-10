@@ -1,0 +1,17 @@
+preferences: tests/fixtures/preferences_replay.jsonl
+base_checkpoint: runs/base_model_toy
+tokenizer_dir: runs/tokenizer_toy
+n_ctx: 128
+batch_size: 2
+steps: 8
+curve_steps: 4
+lr: 0.001
+weight_decay: 0.0
+warmup_steps: 0
+grad_clip: 1.0
+seed: 0
+device: cpu
+amp: false
+log_every: 2
+curve_sizes: [2, 4]
+accuracy_gate: 0.65

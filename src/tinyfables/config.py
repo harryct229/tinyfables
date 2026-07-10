@@ -183,6 +183,65 @@ class AuditConfig:
             raise ValueError("position_swap_review_threshold must be in [0, 1]")
 
 
+@dataclass(frozen=True)
+class RewardTrainConfig:
+    preferences: str
+    base_checkpoint: str
+    tokenizer_dir: str
+    n_ctx: int = 1024
+    batch_size: int = 16
+    steps: int = 1000
+    curve_steps: int = 400
+    lr: float = 1e-5
+    weight_decay: float = 0.0
+    warmup_steps: int = 50
+    grad_clip: float = 1.0
+    seed: int = 0
+    device: str = "auto"
+    amp: bool = True
+    log_every: int = 20
+    curve_sizes: list[int] | None = None
+    accuracy_gate: float = 0.65
+
+    def __post_init__(self) -> None:
+        if self.curve_sizes is None:
+            object.__setattr__(self, "curve_sizes", [100, 500, 1000, 2000])
+        if self.n_ctx <= 0:
+            raise ValueError("n_ctx must be positive")
+        if self.batch_size <= 0:
+            raise ValueError("batch_size must be positive")
+        if self.steps <= 0:
+            raise ValueError("steps must be positive")
+        if self.curve_steps <= 0:
+            raise ValueError("curve_steps must be positive")
+        if self.lr <= 0:
+            raise ValueError("lr must be positive")
+        if self.weight_decay < 0:
+            raise ValueError("weight_decay must be non-negative")
+        if self.warmup_steps < 0:
+            raise ValueError("warmup_steps must be non-negative")
+        if self.grad_clip <= 0:
+            raise ValueError("grad_clip must be positive")
+        if self.log_every < 0:
+            raise ValueError("log_every must be non-negative")
+        if not self.curve_sizes or any(size <= 0 for size in self.curve_sizes):
+            raise ValueError("curve_sizes must contain positive integers")
+        if not 0.0 <= self.accuracy_gate <= 1.0:
+            raise ValueError("accuracy_gate must be in [0, 1]")
+
+
+@dataclass(frozen=True)
+class GateConfig:
+    audit: str
+    reward_summary: str
+    rm_accuracy_gate: float = 0.65
+    require_labeler_self_consistency: bool = True
+
+    def __post_init__(self) -> None:
+        if not 0.0 <= self.rm_accuracy_gate <= 1.0:
+            raise ValueError("rm_accuracy_gate must be in [0, 1]")
+
+
 def _build(cls: type[T], data: Any) -> T:
     if not isinstance(data, dict):
         raise TypeError(f"expected a mapping for {cls.__name__}, got {type(data).__name__}")

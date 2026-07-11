@@ -1,0 +1,12 @@
+# Issue 10 controlled sibling: byte-for-field equal to prep_full.yaml after
+# YAML parsing except paraphrase_coverage 0.15 -> 0.0. The bank remains named
+# so the single treatment difference is explicit and machine-checkable.
+source:
+  hf_dataset: klusai/ds-tf1-en-3m
+  hf_split: train
+  max_rows: 450000
+tokenizer_dir: runs/tokenizer_full
+window: 1024
+seed: 0
+paraphrase_bank: configs/paraphrases.yaml
+paraphrase_coverage: 0.0

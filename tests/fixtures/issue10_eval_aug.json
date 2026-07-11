@@ -1,0 +1,42 @@
+{
+  "perplexity": {
+    "fable_token_loss": 1.4019,
+    "perplexity": 4.063,
+    "n_rows": 500
+  },
+  "adherence_grid": {
+    "canonical": {
+      "character": 0.8,
+      "setting": 0.4,
+      "challenge": 0.3,
+      "outcome": 0.5,
+      "overall": 0.5,
+      "moral_delivery": 0.6,
+      "n": 50
+    },
+    "seen-template": {
+      "character": 0.7,
+      "setting": 0.4,
+      "challenge": 0.3,
+      "outcome": 0.4,
+      "overall": 0.45,
+      "moral_delivery": 0.55,
+      "n": 50
+    },
+    "held-out-template": {
+      "character": 0.6,
+      "setting": 0.4,
+      "challenge": 0.2,
+      "outcome": 0.4,
+      "overall": 0.4,
+      "moral_delivery": 0.5,
+      "n": 50
+    }
+  },
+  "provenance": {
+    "checkpoint_sha": "0000000000000000000000000000000000000000000000000000000000000000",
+    "tokenizer_sha": "1111111111111111111111111111111111111111111111111111111111111111",
+    "seed": 0,
+    "versions": {}
+  }
+}

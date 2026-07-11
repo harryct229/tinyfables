@@ -15,7 +15,14 @@ import time
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
-_VERSIONED_PACKAGES = ["tinyfables", "tokenizers", "numpy", "torch", "transformers"]
+_VERSIONED_PACKAGES = [
+    "tinyfables",
+    "tokenizers",
+    "numpy",
+    "torch",
+    "transformers",
+    "matplotlib",
+]
 
 
 def sha256_file(path: Path) -> str:

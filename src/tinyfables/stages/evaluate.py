@@ -152,11 +152,17 @@ def run(cfg: EvalConfig, out_dir: Path) -> None:
     cal_path.write_text("".join(json.dumps(c) + "\n" for c in calibration))
     report_path = write_eval_report(out_dir, metrics)
 
+    inputs = {
+        "model.safetensors": Path(cfg.checkpoint) / "model.safetensors",
+        "tokenizer.json": Path(cfg.tokenizer_dir) / "tokenizer.json",
+    }
+    if cfg.paraphrase_bank:
+        inputs["paraphrases.yaml"] = Path(cfg.paraphrase_bank)
+
     write_manifest(
-        out_dir, "evaluate", cfg,
+        out_dir,
+        "evaluate",
+        cfg,
         [metrics_path, report_path, cal_path],
-        inputs={
-            "model.safetensors": Path(cfg.checkpoint) / "model.safetensors",
-            "tokenizer.json": Path(cfg.tokenizer_dir) / "tokenizer.json",
-        },
+        inputs=inputs,
     )

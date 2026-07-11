@@ -395,6 +395,24 @@ steps.
 - TRL is the lazy `align` extra (`pip install -e '.[dev,align]'`); tests
   `importorskip("trl")` so the base suite stays green without it.
 
+### Implementation (issue 10, Track A)
+
+- **Controlled sibling configs.** `prep_noaug_full.yaml` differs from `prep_full.yaml`
+  only in `paraphrase_coverage` (`0.15 -> 0.0`). It retains the same 450k-row HF
+  source, source seed, 1024-token window, paraphrase bank, and the existing
+  `runs/tokenizer_full`; the tokenizer is reused, not retrained. The sibling pretrain
+  keeps every scientific field from `pretrain_full.yaml`; only prep/checkpoint/run
+  paths identify the sibling. The two full eval configs differ only in `checkpoint`.
+- **Report figure stage.** `figures` validates upstream artifact hashes, treatment-only
+  prep, scientific pretrain equivalence, and checkpoint-only eval configs before it
+  writes the literal 2-model x 3-family adherence/Moral grid and the complete Issue 07
+  RM curve. Each figure has a PNG, long-form CSV, run ids and manifest hashes; the
+  held-out column is explicitly the five eval-only templates.
+- **Offline evidence.** The toy chain reuses one tokenizer for coverage-zero prep,
+  sibling pretraining, and three-family eval. Fixture tests retain all six grid cells
+  and all four RM-curve points, reject config contamination, and reject tampered
+  artifacts. Measured values enter this section only after their Hub round trip.
+
 ### Operations (from 2026-07-10)
 
 All compute runs (Track B: training, generation, eval at scale) happen on **Colab**

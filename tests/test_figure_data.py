@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -138,6 +139,32 @@ def make_inputs(tmp_path):
     return cfg, aug, noaug, reward
 
 
+def _rewrite_eval_metrics(run_dir, mutate):
+    metrics_path = run_dir / "eval_metrics.json"
+    metrics = json.loads(metrics_path.read_text())
+    mutate(metrics)
+    metrics_path.write_text(json.dumps(metrics, indent=2, sort_keys=True) + "\n")
+    manifest_path = run_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["artifacts"]["eval_metrics.json"] = sha256_file(metrics_path)
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+
+
+def _set_all_eval_counts(metrics, value):
+    for cell in metrics["adherence_grid"].values():
+        cell["n"] = value
+
+
+def _config_copy_with_replacement(tmp_path, source_name, old, new):
+    source = REPO / "configs" / source_name
+    destination = tmp_path / source_name
+    original = source.read_text()
+    changed = original.replace(old, new)
+    assert changed != original
+    destination.write_text(changed)
+    return destination
+
+
 def test_assemble_complete_tables_and_provenance(tmp_path):
     cfg, aug, noaug, reward = make_inputs(tmp_path)
     data = assemble_figure_data(cfg)
@@ -206,3 +233,88 @@ def test_rejects_tampered_upstream_artifact(tmp_path):
 
     with pytest.raises(ValueError, match="data_curve.json hash mismatch"):
         assemble_figure_data(cfg)
+
+
+def test_rejects_uniformly_underfilled_eval_cells(tmp_path):
+    cfg, aug, noaug, _ = make_inputs(tmp_path)
+    for run_dir in (aug, noaug):
+        _rewrite_eval_metrics(
+            run_dir, lambda metrics: _set_all_eval_counts(metrics, 49)
+        )
+
+    with pytest.raises(ValueError, match="must equal requested n_generations=50"):
+        assemble_figure_data(cfg)
+
+
+@pytest.mark.parametrize("bad_count", [49.5, True])
+def test_rejects_non_integer_eval_cell_counts(tmp_path, bad_count):
+    cfg, aug, noaug, _ = make_inputs(tmp_path)
+    for run_dir in (aug, noaug):
+        _rewrite_eval_metrics(
+            run_dir, lambda metrics: _set_all_eval_counts(metrics, bad_count)
+        )
+
+    with pytest.raises(ValueError, match="n must be an exact integer"):
+        assemble_figure_data(cfg)
+
+
+def test_rejects_pretrain_configs_that_share_one_prep_dir(tmp_path):
+    cfg, _, _, _ = make_inputs(tmp_path)
+    contaminated = _config_copy_with_replacement(
+        tmp_path,
+        "pretrain_noaug_full.yaml",
+        "prep_dir: runs/prep_noaug",
+        "prep_dir: runs/prep_full",
+    )
+    cfg = replace(cfg, noaug_pretrain_config=str(contaminated))
+
+    with pytest.raises(ValueError, match="pretrain prep dirs must differ"):
+        assemble_figure_data(cfg)
+
+
+def test_rejects_different_tokenizer_between_prep_and_pretrain(tmp_path):
+    cfg, _, _, _ = make_inputs(tmp_path)
+    pretrain_aug = _config_copy_with_replacement(
+        tmp_path,
+        "pretrain_full.yaml",
+        "tokenizer_dir: runs/tokenizer_full",
+        "tokenizer_dir: runs/other_tokenizer",
+    )
+    pretrain_noaug = _config_copy_with_replacement(
+        tmp_path,
+        "pretrain_noaug_full.yaml",
+        "tokenizer_dir: runs/tokenizer_full",
+        "tokenizer_dir: runs/other_tokenizer",
+    )
+    cfg = replace(
+        cfg,
+        augmented_pretrain_config=str(pretrain_aug),
+        noaug_pretrain_config=str(pretrain_noaug),
+    )
+
+    with pytest.raises(
+        ValueError, match="all prep and pretrain configs must reuse one tokenizer"
+    ):
+        assemble_figure_data(cfg)
+
+
+@pytest.mark.parametrize(
+    ("aug_adherence", "aug_moral", "expected"),
+    [
+        (0.2, 0.3, "augmentation didn't help"),
+        (0.4, 0.3, "augmentation had a mixed measured result"),
+    ],
+)
+def test_reports_non_positive_held_out_outcomes_honestly(
+    tmp_path, aug_adherence, aug_moral, expected
+):
+    cfg, aug, _, _ = make_inputs(tmp_path)
+
+    def change_held_out(metrics):
+        held_out = metrics["adherence_grid"]["held-out-template"]
+        held_out["overall"] = aug_adherence
+        held_out["moral_delivery"] = aug_moral
+
+    _rewrite_eval_metrics(aug, change_held_out)
+
+    assert expected in assemble_figure_data(cfg).held_out_statement

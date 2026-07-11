@@ -104,3 +104,45 @@ def test_real_matplotlib_renderers_when_dependency_is_installed(tmp_path):
     assert curve_png.read_bytes().startswith(PNG_HEADER)
     assert robustness_png.stat().st_size > 1000
     assert curve_png.stat().st_size > 1000
+
+
+class _FailingAxes:
+    def axvspan(self, *args, **kwargs):
+        raise RuntimeError("robustness render failed")
+
+    def plot(self, *args, **kwargs):
+        raise RuntimeError("RM render failed")
+
+
+class _FakePyplot:
+    def __init__(self, axes):
+        self.figure = object()
+        self.axes = axes
+        self.closed = []
+
+    def subplots(self, *args, **kwargs):
+        return self.figure, self.axes
+
+    def close(self, figure):
+        self.closed.append(figure)
+
+
+def test_robustness_renderer_closes_figure_when_rendering_fails(monkeypatch, tmp_path):
+    pyplot = _FakePyplot([_FailingAxes(), _FailingAxes()])
+    monkeypatch.setattr(figures_stage, "_matplotlib", lambda: pyplot)
+
+    with pytest.raises(RuntimeError, match="robustness render failed"):
+        figures_stage.render_robustness_grid([], {}, tmp_path / "robustness.png")
+
+    assert pyplot.closed == [pyplot.figure]
+
+
+def test_rm_renderer_closes_figure_when_rendering_fails(monkeypatch, tmp_path):
+    pyplot = _FakePyplot(_FailingAxes())
+    monkeypatch.setattr(figures_stage, "_matplotlib", lambda: pyplot)
+    rows = [{"train_size": 100, "held_out_accuracy": 0.5, "accuracy_gate": 0.65}]
+
+    with pytest.raises(RuntimeError, match="RM render failed"):
+        figures_stage.render_rm_data_curve(rows, {}, tmp_path / "curve.png")
+
+    assert pyplot.closed == [pyplot.figure]

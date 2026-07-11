@@ -92,10 +92,16 @@ def _control_provenance(cfg: FiguresConfig) -> tuple[dict, dict[str, Path]]:
     }
     if scientific_diffs:
         raise ValueError(f"pretrain scientific configs differ: {scientific_diffs}")
-    if prep_aug["tokenizer_dir"] != prep_noaug["tokenizer_dir"]:
-        raise ValueError("both prep configs must reuse one tokenizer")
-    if pre_aug["tokenizer_dir"] != pre_noaug["tokenizer_dir"]:
-        raise ValueError("both pretrain configs must reuse one tokenizer")
+    if pre_aug["prep_dir"] == pre_noaug["prep_dir"]:
+        raise ValueError("augmented and no-aug pretrain prep dirs must differ")
+    tokenizer_dirs = {
+        prep_aug["tokenizer_dir"],
+        prep_noaug["tokenizer_dir"],
+        pre_aug["tokenizer_dir"],
+        pre_noaug["tokenizer_dir"],
+    }
+    if len(tokenizer_dirs) != 1:
+        raise ValueError("all prep and pretrain configs must reuse one tokenizer")
 
     provenance = {
         "prep_only_difference": expected_prep_diff,
@@ -170,13 +176,44 @@ def _robustness_rows(
 
     rows = []
     runs = (
-        ("with-aug", 0.15, cfg.augmented_run_id, aug_metrics, aug_inputs, aug_manifest_sha),
-        ("no-aug", 0.0, cfg.noaug_run_id, noaug_metrics, noaug_inputs, noaug_manifest_sha),
+        (
+            "with-aug",
+            0.15,
+            cfg.augmented_run_id,
+            aug_metrics,
+            aug_inputs,
+            aug_manifest_sha,
+            aug_cfg,
+        ),
+        (
+            "no-aug",
+            0.0,
+            cfg.noaug_run_id,
+            noaug_metrics,
+            noaug_inputs,
+            noaug_manifest_sha,
+            noaug_cfg,
+        ),
     )
-    for model, coverage, run_id, metrics, inputs, manifest_sha in runs:
+    for model, coverage, run_id, metrics, inputs, manifest_sha, run_cfg in runs:
+        requested_n = run_cfg.get("n_generations")
+        if type(requested_n) is not int or requested_n <= 0:
+            raise ValueError(
+                f"{model} manifest n_generations must be a positive exact integer"
+            )
         perplexity = float(metrics["perplexity"]["perplexity"])
         for family in FAMILY_ORDER:
             source = metrics["adherence_grid"][family]
+            cell_n = source.get("n")
+            if type(cell_n) is not int:
+                raise ValueError(
+                    f"{model}/{family} n must be an exact integer, got {cell_n!r}"
+                )
+            if cell_n != requested_n:
+                raise ValueError(
+                    f"{model}/{family} n must equal requested "
+                    f"n_generations={requested_n}, got {cell_n}"
+                )
             row = {
                 "model": model,
                 "paraphrase_coverage": coverage,
@@ -190,13 +227,11 @@ def _robustness_rows(
                 "moral_delivery": _rate(
                     source["moral_delivery"], f"{model}/{family}/moral_delivery"
                 ),
-                "n": int(source["n"]),
+                "n": cell_n,
                 "perplexity": perplexity,
                 "checkpoint_sha256": inputs["model.safetensors"],
                 "eval_manifest_sha256": manifest_sha,
             }
-            if row["n"] <= 0:
-                raise ValueError(f"{model}/{family} has no generations")
             rows.append(row)
     if len({row["n"] for row in rows}) != 1:
         raise ValueError("all robustness cells must use the same number of FableSpecs")

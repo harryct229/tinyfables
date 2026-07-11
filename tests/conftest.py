@@ -1,6 +1,8 @@
-"""Shared test fixtures/helpers. `tests/` is not a package, so pytest's
-default import mode (rootdir-relative, test dir on sys.path) is what lets
-other test modules do `from conftest import fake_labeler_runner`."""
+"""Shared test fixtures/helpers.
+
+`tests` is an intentional package, so test modules must use package-relative
+imports such as `from .conftest import fake_labeler_runner` for shared helpers.
+"""
 
 
 def fake_labeler_runner(prompt, model):

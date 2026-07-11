@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from fixtures.make_tiny_corpus import main as regenerate_tiny_corpus
+from .fixtures.make_tiny_corpus import main as regenerate_tiny_corpus
 
 FIXTURE = Path(__file__).parent / "fixtures" / "tiny_corpus.jsonl"
 

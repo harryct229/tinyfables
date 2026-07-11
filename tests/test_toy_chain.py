@@ -55,7 +55,7 @@ def test_toy_chain_extends_through_ppo_and_eval(tmp_path, capsys):
 
     pytest.importorskip("trl")
 
-    from conftest import fake_labeler_runner
+    from .conftest import fake_labeler_runner
 
     from tinyfables.config import (
         EvalConfig, PairgenConfig, PPOStageConfig, DeriveConfig, LabelConfig, SourceSpec,
